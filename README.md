@@ -1,4 +1,4 @@
-# hxAnonCls
+# hxAnonCls [![Build Status](https://travis-ci.org/andyli/hxAnonCls.svg?branch=master)](https://travis-ci.org/andyli/hxAnonCls)
 
 Java style [Anonymous Classes](http://docs.oracle.com/javase/tutorial/java/javaOO/anonymousclasses.html) in Haxe.
 
@@ -78,3 +78,5 @@ Notice that:
  * The argument to `AnonCls.make` should be an `ECheckType` expression, which is in the form of `(variable:Type)`. The (extra) parentheses are required.
  * Similar to Java, **hxAnonCls** is able to create anonymous class for both class and interface.
  * A default constructor is added implicitly if it is not provided.
+
+[![Support via Gittip](https://rawgithub.com/twolfson/gittip-badge/0.2.1/dist/gittip.png)](https://www.gittip.com/AndyLi/)
