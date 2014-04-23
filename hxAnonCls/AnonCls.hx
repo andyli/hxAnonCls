@@ -1,11 +1,14 @@
 package hxAnonCls;
 
 import haxe.macro.*;
+#if macro
 import haxe.macro.Expr;
 using StringTools;
 using Lambda;
+#end
 
 class AnonCls {
+	#if macro
 	static function typeToTypePath(t:Type):TypePath {
 		return switch (Context.follow(t)) {
 			case TInst(t, params):
@@ -35,6 +38,7 @@ class AnonCls {
 			case _: throw 'Cannot convert this to TypePath: $t';
 		};
 	}
+	#end
 
 	macro static public function make(expr:Expr):Expr {
 		switch (expr) {

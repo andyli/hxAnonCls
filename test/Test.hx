@@ -101,7 +101,7 @@ class Test extends TestCase {
 		runner.add(new Test());
 		runner.add(new pack.Packed());
 		var success = runner.run();
-		#if sys
+		#if (sys || nodejs)
 		Sys.exit(success ? 0 : 1);
 		#end
 	}
