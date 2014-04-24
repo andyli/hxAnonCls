@@ -48,26 +48,25 @@ class AnonCls {
 				switch (t) {
 					case TInst(_t, params):
 						var clsType = _t.get();
-						var fields = switch (extend) {
-							case TAnonymous(fields): fields;
-							case _: throw "It should be used in the form of `AnonCls.make((new MyClass():{ override public function xxx() return 'something'; }))`";
-						};
-						var moduleName = clsType.module.substring(clsType.module.lastIndexOf(".")+1);
 						var posInfo = Context.getPosInfos(expr.pos);
-						var superTypePath = typeToTypePath(t);
-						var typeDef:TypeDefinition = {
-							pack: clsType.pack,
-							kind: if (clsType.isInterface) {
-								TDClass(null, [superTypePath], false);
-							} else {
-								TDClass(superTypePath, null, false);
-							},
-							name: clsType.name + "_" + Context.getLocalModule().replace(".", "_") + "_" + posInfo.min,
-							fields: if (
+						var localModule = Context.getLocalModule().split(".");
+						var localPack = localModule.copy();
+						var localModuleName = localPack.pop();
+						var clsName = localModuleName + "_" + clsType.name + "_" + posInfo.min;
+						
+						try {
+							var type = Context.getType(localModule.join(".") + "." + clsName);
+						} catch(err:Dynamic) {
+							var fields = switch (extend) {
+								case TAnonymous(fields): fields;
+								case _: throw "It should be used in the form of `AnonCls.make((new MyClass():{ override public function xxx() return 'something'; }))`";
+							};
+
+							if (
 								(clsType.isInterface || clsType.constructor == null) &&
 								!fields.exists(function(f) return f.name == "new")
 							) {
-								fields.concat([{
+								fields.push({
 									name: "new",
 									kind: FFun({
 										args: [],
@@ -75,15 +74,25 @@ class AnonCls {
 										expr: macro {}
 									}),
 									pos: expr.pos
-								}]);
-							} else {
-								fields;
-							},
-							pos: expr.pos
+								});
+							}
+							
+							var superTypePath = typeToTypePath(t);
+							var typeDef:TypeDefinition = {
+								pack: localModule,
+								kind: if (clsType.isInterface) {
+									TDClass(null, [superTypePath], false);
+								} else {
+									TDClass(superTypePath, null, false);
+								},
+								name: clsName,
+								fields: fields,
+								pos: expr.pos
+							}
+							Context.defineType(typeDef);
 						}
-						Context.defineType(typeDef);
 
-						var tPath = { pack:typeDef.pack, name: typeDef.name };
+						var tPath = { pack:[], name:localModuleName, sub:clsName };
 						return macro new $tPath($a{args});
 					default:
 						throw "Only able to create anonymous class of class or interface.";
