@@ -60,15 +60,15 @@ import java.awt.event.*;
 
 typingArea = new JTextField(20);
 typingArea.addKeyListener(AnonCls.make((new KeyListener():{
-    public function keyTyped(e:KeyEvent):Void {
+    public function keyTyped(e:java.awt.event.KeyEvent):Void {
         //handle keyTyped
     }
 
-    public function keyPressed(e:KeyEvent):Void {
+    public function keyPressed(e:java.awt.event.KeyEvent):Void {
         //handle keyPressed
     }
 
-    public function keyReleased(e:KeyEvent):Void {
+    public function keyReleased(e:java.awt.event.KeyEvent):Void {
         //handle keyReleased
     }
 })));
@@ -78,5 +78,20 @@ Notice that:
  * The argument to `AnonCls.make` should be an `ECheckType` expression, which is in the form of `(variable:Type)`. The (extra) parentheses are required.
  * Similar to Java, **hxAnonCls** is able to create anonymous class for both class and interface.
  * A default constructor is added implicitly if it is not provided.
+
+## Limitations (possible future improvements)
+
+ * There is no import or using available in the anonymous class definition. We have to *always* use fully qualified type names as shown in the above example (`java.awt.event.KeyEvent`).
+ * It is not a Java inner class. It is not allowed to access the instance members of its "parent" object implicitly. However we can define a constructor to pass the parent object to it:
+
+```
+AnonCls.make((new KeyListener(this):{
+    var parent:MyParent;
+    public function new(parent:MyParent):Void {
+        this.parent = parent;
+    }
+    /* other methods */
+}));
+```
 
 [![Support via Gittip](https://rawgithub.com/twolfson/gittip-badge/0.2.1/dist/gittip.png)](https://www.gittip.com/AndyLi/)
