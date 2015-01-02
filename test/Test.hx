@@ -1,5 +1,6 @@
 import haxe.unit.*;
 import hxAnonCls.AnonCls;
+import hxAnonCls.AnonCls.make in A;
 
 interface IFoo {
 	public function foo():String;
@@ -94,6 +95,13 @@ class Test extends TestCase {
 			public function foo() return {bar:"ParamFoo<Dynamic<String>>"};
 		}));
 		assertEquals("ParamFoo<Dynamic<String>>", foobar.foo().bar);
+	}
+
+	public function testAlias():Void {
+		var foobar = A((new IFoo():{
+			public function foo() return "testInterface";
+		}));
+		assertEquals("testInterface", foobar.foo());
 	}
 
 	static function main():Void {
