@@ -105,6 +105,7 @@ class Test extends TestCase {
 		assertEquals("testInterface", foobar.foo());
 	}
 
+	#if (haxe_ver >= 3.2)
 	public function testUsing():Void {
 		var foobar = AnonCls.make((new IFoo():{
 			public function foo()
@@ -114,6 +115,7 @@ class Test extends TestCase {
 		}));
 		assertEquals("1,2,3", foobar.foo());
 	}
+	#end
 
 	static function main():Void {
 		var runner = new TestRunner();

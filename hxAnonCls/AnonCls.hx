@@ -92,7 +92,8 @@ class AnonCls {
 							}
 							Context.defineModule(
 								localModule.join("."),
-								[typeDef],
+								[typeDef]
+								#if (haxe_ver >= 3.2),
 								[],
 								[for (ct in Context.getLocalUsing()) {
 									var ct = ct.get();
@@ -102,6 +103,7 @@ class AnonCls {
 										params: [],
 									}
 								}]
+								#end
 							);
 						}
 
