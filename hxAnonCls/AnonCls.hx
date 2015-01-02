@@ -90,7 +90,19 @@ class AnonCls {
 								fields: fields,
 								pos: expr.pos
 							}
-							Context.defineType(typeDef);
+							Context.defineModule(
+								localModule.join("."),
+								[typeDef],
+								[],
+								[for (ct in Context.getLocalUsing()) {
+									var ct = ct.get();
+									{
+										pack: ct.pack,
+										name: ct.name,
+										params: [],
+									}
+								}]
+							);
 						}
 
 						var tPath = { pack:[], name:localModuleName, sub:clsName };

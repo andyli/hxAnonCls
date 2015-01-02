@@ -1,6 +1,7 @@
 import haxe.unit.*;
 import hxAnonCls.AnonCls;
 import hxAnonCls.AnonCls.make in A;
+using Lambda;
 
 interface IFoo {
 	public function foo():String;
@@ -102,6 +103,16 @@ class Test extends TestCase {
 			public function foo() return "testInterface";
 		}));
 		assertEquals("testInterface", foobar.foo());
+	}
+
+	public function testUsing():Void {
+		var foobar = AnonCls.make((new IFoo():{
+			public function foo()
+				return [1, 2, 3]
+					.array()
+					.join(",");
+		}));
+		assertEquals("1,2,3", foobar.foo());
 	}
 
 	static function main():Void {
