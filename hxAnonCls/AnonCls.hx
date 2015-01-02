@@ -67,6 +67,7 @@ class AnonCls {
 								!fields.exists(function(f) return f.name == "new")
 							) {
 								fields.push({
+									access: [APublic],
 									name: "new",
 									kind: FFun({
 										args: [],
