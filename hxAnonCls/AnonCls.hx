@@ -211,10 +211,21 @@ class AnonCls {
 										macro var ___this___:$ct;
 									}
 								]);
+							
+							function getCtor(t:haxe.macro.Type.ClassType):Null<haxe.macro.Type.ClassField> {
+								if (t == null)
+									return null;
+								if (t.constructor != null)
+									return t.constructor.get();
+								if (t.superClass != null)
+									return getCtor(t.superClass.t.get());
+								return null;
+							}
 
-							if (clsType.constructor != null) {
+							var ctor = getCtor(clsType);
+							if (ctor != null) {
 								//___superNew___
-								var fType = Context.toComplexType(clsType.constructor.get().type);
+								var fType = Context.toComplexType(ctor.type);
 								typeHints.push(macro var ___superNew___:$fType);
 							}
 
