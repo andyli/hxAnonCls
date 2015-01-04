@@ -1,3 +1,5 @@
 -main Test
 -cp test
+-lib tink_macro
+-debug
 --interp

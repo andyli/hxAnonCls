@@ -16,6 +16,10 @@ class AFooC {
 	public function foo():String return "afoo";
 }
 
+class AFooC2 extends AFooC {
+
+}
+
 typedef IFoo2 = IFoo;
 
 interface ParamFoo<T> {
@@ -46,6 +50,11 @@ class Test extends TestCase {
 			override public function foo() return "testClass";
 		}));
 		assertEquals("testClass", foobar.foo());
+
+		var foobar = AnonCls.make((new AFoo():{
+			override public function foo() return super.foo() + "!";
+		}));
+		assertEquals("afoo!", foobar.foo());
 	}
 
 	public function testClassWithCtr():Void {
@@ -58,6 +67,17 @@ class Test extends TestCase {
 	public function testClassWithCtrOverrideCtr():Void {
 		var foobar = AnonCls.make((new AFooC("testClassWithCtrOverrideCtr"):{
 			var str:String;
+			public function new(str:String):Void {
+				super();
+				this.str = str;
+			}
+			override public function foo() return str;
+		}));
+		assertEquals("testClassWithCtrOverrideCtr", foobar.foo());
+
+		var foobar = AnonCls.make((new AFooC2("testClassWithCtrOverrideCtr"):{
+			var str = "dummy";
+			var dummy(default, default) = "dummmmy";
 			public function new(str:String):Void {
 				super();
 				this.str = str;
@@ -105,7 +125,6 @@ class Test extends TestCase {
 		assertEquals("testInterface", foobar.foo());
 	}
 
-	#if (haxe_ver >= 3.2)
 	public function testUsing():Void {
 		var foobar = AnonCls.make((new IFoo():{
 			public function foo()
@@ -115,7 +134,6 @@ class Test extends TestCase {
 		}));
 		assertEquals("1,2,3", foobar.foo());
 	}
-	#end
 
 	static function main():Void {
 		var runner = new TestRunner();

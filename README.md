@@ -60,15 +60,15 @@ import java.awt.event.*;
 
 typingArea = new JTextField(20);
 typingArea.addKeyListener(AnonCls.make((new KeyListener():{
-    public function keyTyped(e:java.awt.event.KeyEvent):Void {
+    public function keyTyped(e:KeyEvent):Void {
         //handle keyTyped
     }
 
-    public function keyPressed(e:java.awt.event.KeyEvent):Void {
+    public function keyPressed(e:KeyEvent):Void {
         //handle keyPressed
     }
 
-    public function keyReleased(e:java.awt.event.KeyEvent):Void {
+    public function keyReleased(e:KeyEvent):Void {
         //handle keyReleased
     }
 })));
@@ -82,7 +82,6 @@ Notice that:
 
 ## Limitations (possible future improvements)
 
- * `import` statements in the outer context have no effect in the anonymous class definition. However, `using` works as expected (for haxe 3.2+). We have to either *always* use fully qualified type names as shown in the above example (`java.awt.event.KeyEvent`), or to use `using` which implies `import`. To correctly support `import`, we have to wait for [haxe issue #3560](https://github.com/HaxeFoundation/haxe/issues/3560) to be resolved.
  * It is not a Java inner class. It is not allowed to access the instance members of its "parent" object implicitly. However we can define a constructor to pass the parent object to it:
 
 ```haxe
