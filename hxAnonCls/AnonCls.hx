@@ -218,7 +218,7 @@ class AnonCls {
 								typeHints.push(macro var ___superNew___:$fType);
 							}
 
-							var clsFields = [];
+							var clsFields:Array<Field> = [];
 							for (f in fields) {
 								clsFields.push({
 									access: f.access,
