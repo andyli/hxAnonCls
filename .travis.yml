@@ -19,9 +19,12 @@ before_script:
 
 script:
   - haxe -main Test -cp test -lib tink_macro -debug --interp
-  - haxe -main Test -cp test -lib tink_macro -debug -cpp bin && ./bin/Test-debug
-  - haxe -main Test -cp test -lib tink_macro -debug -php bin && php bin/index.php
+  - haxe -main Test -cp test -lib tink_macro -debug -cpp bin/cpp && ./bin/cpp/Test-debug
+  - haxe -main Test -cp test -lib tink_macro -debug -php bin/php && php bin/php/index.php
   - haxe -main Test -cp test -lib tink_macro -debug -neko bin/Test.n && neko bin/Test.n
   - haxe -main Test -cp test -lib tink_macro -debug -js bin/Test.js -lib nodejs && node bin/Test.js
-  - haxe -main Test -cp test -lib tink_macro -debug -java bin && java -jar bin/Test-Debug.jar
-  - haxe -main Test -cp test -lib tink_macro -debug -cs bin && mono bin/bin/Test-Debug.exe
+  - haxe -main Test -cp test -lib tink_macro -debug -java bin/java && java -jar bin/java/Test-Debug.jar
+  - haxe -main Test -cp test -lib tink_macro -debug -cs bin/cs && mono bin/cs/bin/Test-Debug.exe
+  # - haxe -main Test -cp test -lib tink_macro -debug -python bin/Test.py && python3 bin/Test.py
+  - haxe -main Test -cp test -lib tink_macro -debug -swf bin/Test.swf
+  - haxe -main Test -cp test -lib tink_macro -debug -as3 bin/as3
