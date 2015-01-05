@@ -26,6 +26,10 @@ interface ParamFoo<T> {
 	public function foo():T;
 }
 
+class AFooPrivateFieldAccess {
+	function _private() return "_private";
+}
+
 class Test extends TestCase {
 	public function testInterface():Void {
 		var foobar = AnonCls.make((new IFoo():{
@@ -133,6 +137,13 @@ class Test extends TestCase {
 					.join(",");
 		}));
 		assertEquals("1,2,3", foobar.foo());
+	}
+
+	public function testPrivateFieldAccess():Void {
+		var foo = AnonCls.make((new AFooPrivateFieldAccess():{
+			inline public function test():String return _private();
+		}));
+		assertEquals("_private", foo.test());
 	}
 
 	static function main():Void {

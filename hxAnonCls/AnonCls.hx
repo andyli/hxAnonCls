@@ -65,6 +65,37 @@ class AnonCls {
 				ExprTools.map(expr, unmapWithHint);
 		}
 	}
+
+	static public function addPriAcc(te:haxe.macro.Type.TypedExpr):haxe.macro.Type.TypedExpr {
+		function isPrivateFieldAccess(fa:haxe.macro.Type.FieldAccess):Bool {
+			return switch (fa) {
+				case FInstance(_, cf)
+				   | FStatic(_, cf)
+				   | FClosure(_, cf)
+				if (!cf.get().isPublic):
+					true;
+				case _:
+					false;
+			}
+		}
+		switch (te) {
+			case {expr: TField(e, isPrivateFieldAccess(_) => true), t:t, pos:pos}:
+				return {
+					expr: TMeta(
+						{
+							name: ":privateAccess",
+							params: [],
+							pos: pos
+						},
+						te
+					),
+					t: t,
+					pos: pos
+				}
+			case _:
+		}
+		return TypedExprTools.map(te, addPriAcc);
+	}
 	#end
 
 	macro static public function make(expr:Expr):Expr {
@@ -148,7 +179,7 @@ class AnonCls {
 											for (f in fields)
 											if (!existingFields.exists(function(ef) return ef.name == f.name || f.name == "new"))
 											{
-												access: f.access,
+												access: [for (a in f.access) if (a != AInline) a],
 												name: f.name,
 												kind: switch (f.kind) {
 													case FFun(fun):
@@ -240,9 +271,9 @@ class AnonCls {
 												expr: EFunction(f.name, fun),
 												pos: f.pos
 											};
-											var te = Context.getTypedExpr(Context.typeExpr(
+											var te = Context.getTypedExpr(addPriAcc(Context.typeExpr(
 												macro $b{typeHints.concat([mapWithHint(e)])}
-											));
+											)));
 											switch (te) {
 												case macro $b{es}:
 													var laste = 
