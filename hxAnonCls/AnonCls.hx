@@ -142,6 +142,8 @@ class AnonCls {
 												var existingType = 
 												switch (existingFields.find(function(f) return f.name == fName))
 												{
+													case null:
+														null;
 													case {type:TFun(args, ret)}:
 														{args: args, ret:ret};
 													case _:
