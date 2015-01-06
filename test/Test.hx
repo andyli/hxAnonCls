@@ -2,6 +2,7 @@ import haxe.unit.*;
 import hxAnonCls.AnonCls;
 import hxAnonCls.AnonCls.make in A;
 using Lambda;
+import haxe.Json.*;
 
 interface IFoo {
 	public function foo():String;
@@ -139,12 +140,35 @@ class Test extends TestCase {
 		assertEquals("1,2,3", foobar.foo());
 	}
 
+	public function testImport():Void {
+		var foobar = AnonCls.make((new IFoo():{
+			public function foo()
+				return stringify([1, 2, 3]);
+		}));
+		assertEquals("[1,2,3]", foobar.foo());
+	}
+
 	public function testPrivateFieldAccess():Void {
 		var foo = AnonCls.make((new AFooPrivateFieldAccess():{
 			inline public function test():String return _private();
 		}));
 		assertEquals("_private", foo.test());
 	}
+
+	public function testParentClassAccess():Void {
+		var foobar = AnonCls.make((new AFoo():{
+			public function new():Void {
+				assertEquals("parent private field", privateField);
+			}
+			override public function foo() {
+				assertEquals("afoo", super.foo());
+				return "foobar";
+			}
+		}));
+		assertEquals("foobar", foobar.foo());
+	}
+
+	var privateField = "parent private field";
 
 	static function main():Void {
 		var runner = new TestRunner();

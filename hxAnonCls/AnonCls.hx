@@ -66,7 +66,7 @@ class AnonCls {
 		}
 	}
 
-	static public function addPriAcc(te:haxe.macro.Type.TypedExpr):haxe.macro.Type.TypedExpr {
+	static function addPriAcc(te:haxe.macro.Type.TypedExpr):haxe.macro.Type.TypedExpr {
 		function isPrivateFieldAccess(fa:haxe.macro.Type.FieldAccess):Bool {
 			return switch (fa) {
 				case FInstance(_, cf)
@@ -95,6 +95,16 @@ class AnonCls {
 			case _:
 		}
 		return TypedExprTools.map(te, addPriAcc);
+	}
+
+	static function getCtor(t:haxe.macro.Type.ClassType):Null<haxe.macro.Type.ClassField> {
+		if (t == null)
+			return null;
+		if (t.constructor != null)
+			return t.constructor.get();
+		if (t.superClass != null)
+			return getCtor(t.superClass.t.get());
+		return null;
 	}
 	#end
 
@@ -171,7 +181,6 @@ class AnonCls {
 								.concat([
 									{
 										//___super___
-										var ct = Context.toComplexType(t);
 										macro var ___super___:$ct;
 									},
 									{	
@@ -244,16 +253,6 @@ class AnonCls {
 										macro var ___this___:$ct;
 									}
 								]);
-							
-							function getCtor(t:haxe.macro.Type.ClassType):Null<haxe.macro.Type.ClassField> {
-								if (t == null)
-									return null;
-								if (t.constructor != null)
-									return t.constructor.get();
-								if (t.superClass != null)
-									return getCtor(t.superClass.t.get());
-								return null;
-							}
 
 							var ctor = getCtor(clsType);
 							if (ctor != null) {
@@ -263,6 +262,7 @@ class AnonCls {
 							}
 
 							var clsFields:Array<Field> = [];
+							var hasParentAcc = false;
 							for (f in fields) {
 								clsFields.push({
 									access: f.access,
@@ -273,10 +273,15 @@ class AnonCls {
 												expr: EFunction(f.name, fun),
 												pos: f.pos
 											};
-											var te = Context.getTypedExpr(addPriAcc(Context.typeExpr(
+											var te = Context.typeExpr(
 												macro $b{typeHints.concat([mapWithHint(e)])}
-											)));
-											switch (te) {
+											);
+											te = addPriAcc(te);
+											// trace(te);
+											// trace(TypedExprTools.toString(te));
+											e = Context.getTypedExpr(te);
+											//trace(ExprTools.toString(e));
+											switch (e) {
 												case macro $b{es}:
 													var laste = 
 													switch (es[es.length-1]) {
@@ -289,7 +294,19 @@ class AnonCls {
 														case e:
 															throw ExprTools.toString(e); 
 													}
-													switch (unmapWithHint(laste)) {
+													laste = unmapWithHint(laste);
+
+													function mapParentAcc(e:Expr):Expr {
+														return switch (e) {
+															case {expr: EConst(CIdent("`")), pos: pos}:
+																hasParentAcc = true;
+																macro @:pos(pos) this.___context___.___parent___;
+															case _:
+																ExprTools.map(e, mapParentAcc);
+														}
+													}
+													laste = mapParentAcc(laste);
+													switch (laste) {
 														case ue = {expr:EFunction(_, fun)}:
 															// trace(ExprTools.toString(ue));
 															FFun({
@@ -301,11 +318,32 @@ class AnonCls {
 														case e:
 															throw e;
 													}
-												case _: throw te;
+												case _: throw e;
 											}
 										case _: f.kind;
 									},
 									pos: f.pos
+								});
+							}
+
+							var needContext = hasParentAcc;
+							var localClass = Context.getLocalClass();
+							var dynamicType = Context.getType("Dynamic");
+							var localClassCt = Context.toComplexType(TInst(localClass, [for (_ in localClass.get().params) dynamicType]));
+							var contextArg = {name:"___context___", type:macro:{___parent___:$localClassCt}};
+
+							if (needContext){
+								var fields = [];
+								if (hasParentAcc) {
+									fields.push({field: "___parent___", expr: macro this});
+								}
+								args.push({expr: EObjectDecl(fields), pos: Context.currentPos()});
+
+								clsFields.push({
+									access: [APrivate],
+									name: contextArg.name,
+									kind: FProp("default", "null", contextArg.type, null),
+									pos: Context.currentPos()
 								});
 							}
 
@@ -335,12 +373,13 @@ class AnonCls {
 							// 	}),
 							// 	pos: Context.currentPos(),
 							// });
-
+							
+							var ctorField = clsFields.find(function(f) return f.name == "new");
 							if (
-								(clsType.isInterface || clsType.constructor == null) &&
-								!clsFields.exists(function(f) return f.name == "new")
+								ctorField == null &&
+								(clsType.isInterface || clsType.constructor == null)
 							) {
-								clsFields.push({
+								clsFields.push(ctorField = {
 									access: [APublic],
 									name: "new",
 									kind: FFun({
@@ -351,6 +390,23 @@ class AnonCls {
 									pos: expr.pos
 								});
 							}
+							if (ctorField != null && needContext) {
+								ctorField.kind = switch (ctorField.kind) {
+									case FFun(fun):
+										FFun({
+											params: fun.params,
+											args: fun.args.concat([contextArg]),
+											expr: macro {
+												this.___context___ = ___context___;
+												${fun.expr}
+											},
+											ret: fun.ret
+										});
+									case _:
+										throw "constructor should be a function";
+								}
+							}
+
 							
 							var superTypePath = typeToTypePath(t);
 							var typeDef:TypeDefinition = {

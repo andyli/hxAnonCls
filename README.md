@@ -77,18 +77,19 @@ typingArea.addKeyListener(AnonCls.make((new KeyListener():{
 Notice that:
  * The argument to `AnonCls.make` should be an `ECheckType` expression, which is in the form of `(variable:Type)`. The (extra) parentheses are required.
  * You may use `import hxAnonCls.AnonCls.make in A;`, such that you can create anonymous class with shorter syntax: `A((new Type():{/*... */}))`.
- * Similar to Java, **hxAnonCls** is able to create anonymous class for both class and interface.
- * A default constructor is added implicitly if it is not provided.
+ * Similar to Java, hxAnonCls is able to create anonymous class for both class and interface. A default constructor is added implicitly if it is not provided.
+ * Similar to Java, anonymous classes created by hxAnonCls can access the properties and methods of their parent classes, including those are private.
 
 ## Limitations (possible future improvements)
 
- * It is not a Java inner class. It is not allowed to access the instance members of its "parent" object implicitly. However we can define a constructor to pass the parent object to it:
+ * Classes created by hxAnonCls are not allowed to access local variables in the scope of their declarations. However we can define constructors to pass the variables to them:
 
 ```haxe
-AnonCls.make((new KeyListener(this):{
-    var parent:MyParent;
-    public function new(parent:MyParent):Void {
-        this.parent = parent;
+var msg = "key triggered";
+AnonCls.make((new KeyListener(msg):{
+    var msg:String;
+    public function new(msg:String):Void {
+        this.msg = msg;
     }
     /* other methods */
 }));
