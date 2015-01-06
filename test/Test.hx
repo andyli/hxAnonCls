@@ -148,6 +148,16 @@ class Test extends TestCase {
 		assertEquals("[1,2,3]", foobar.foo());
 	}
 
+	#if js
+	public function testUntyped():Void {
+		var foobar = AnonCls.make((new IFoo():{
+			public function foo()
+				return untyped __js__("\"test\"");
+		}));
+		assertEquals("test", foobar.foo());
+	}
+	#end
+
 	public function testPrivateFieldAccess():Void {
 		var foo = AnonCls.make((new AFooPrivateFieldAccess():{
 			inline public function test():String return _private();

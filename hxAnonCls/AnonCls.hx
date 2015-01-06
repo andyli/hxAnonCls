@@ -106,6 +106,40 @@ class AnonCls {
 			return getCtor(t.superClass.t.get());
 		return null;
 	}
+
+	static function getUnbounds(te:haxe.macro.Type.TypedExpr):Map<String,haxe.macro.Type.TypedExpr> {
+		var map = new Map();
+		function _map(te:haxe.macro.Type.TypedExpr):haxe.macro.Type.TypedExpr {
+			return switch (te.expr) {
+				case TLocal(v)
+				if ((untyped v.meta:Metadata).exists(function(m) return m.name == ":unbound")):
+					map[v.name] = te;
+					te;
+				case _:
+					TypedExprTools.map(te, _map);
+			}
+		}
+		_map(te);
+		return map;
+	}
+
+	static function posEq(pos1:Position, pos2:Position):Bool {
+		var pos1 = Context.getPosInfos(pos1);
+		var pos2 = Context.getPosInfos(pos2);
+		return pos1.file == pos2.file && pos1.min == pos2.min && pos1.max == pos2.max;
+	}
+
+	static function mapUnbound(e:Expr, unbounds:Map<String,haxe.macro.Type.TypedExpr>):Expr {
+		function _map(e:Expr):Expr {
+			return switch (e) {
+				case macro $i{ident} if (unbounds.exists(ident) && posEq(unbounds[ident].pos, e.pos)):
+					macro untyped $e;
+				case _:
+					ExprTools.map(e, _map);
+			}
+		}
+		return _map(e);
+	}
 	#end
 
 	macro static public function make(expr:Expr):Expr {
@@ -280,7 +314,8 @@ class AnonCls {
 											// trace(te);
 											// trace(TypedExprTools.toString(te));
 											e = Context.getTypedExpr(te);
-											//trace(ExprTools.toString(e));
+											e = mapUnbound(e, getUnbounds(te));
+											// trace(ExprTools.toString(e));
 											switch (e) {
 												case macro $b{es}:
 													var laste = 
