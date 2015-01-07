@@ -2,6 +2,7 @@ import haxe.unit.*;
 import hxAnonCls.AnonCls;
 import hxAnonCls.AnonCls.make in A;
 using Lambda;
+using Std;
 import haxe.Json.*;
 
 interface IFoo {
@@ -29,6 +30,20 @@ interface ParamFoo<T> {
 
 class AFooPrivateFieldAccess {
 	function _private() return "_private";
+}
+
+class ParamTest<T> extends TestCase {
+	var t:T;
+	public function new(t:T) {
+		super();
+		this.t = t;
+	}
+	public function test():Void {
+		var foobar = AnonCls.make((new IFoo():{
+			public function foo() return t.string();
+		}));
+		assertEquals(t.string(), foobar.foo());
+	}
 }
 
 class Test extends TestCase {
@@ -198,6 +213,7 @@ class Test extends TestCase {
 		var runner = new TestRunner();
 		runner.add(new Test());
 		runner.add(new pack.Packed());
+		runner.add(new ParamTest(123));
 		var success = runner.run();
 		#if (sys || nodejs)
 		Sys.exit(success ? 0 : 1);

@@ -437,12 +437,17 @@ class AnonCls {
 								localNames[v.name] = v.t;
 
 							var needContext = hasParentAcc || locals.length > 0;
-							var localClass = Context.getLocalClass();
+							var localClass = Context.getLocalClass().get();
 							var dynamicType = Context.getType("Dynamic");
 							var contextCt = {
 								var fields:Array<Field> = [];
 								if (hasParentAcc) {
-									var localClassCt = Context.toComplexType(TInst(localClass, [for (_ in localClass.get().params) dynamicType]));
+									var localClassCt = TPath({
+										pack:localClass.pack, 
+										name:localClass.module.substring(localClass.module.lastIndexOf(".")+1), 
+										sub:localClass.name,
+										params:[for (p in localClass.params) TPType(macro:Dynamic)]
+									});
 									fields.push({
 										name: "___parent___",
 										kind: FProp("default", "never", localClassCt, null),
@@ -530,7 +535,7 @@ class AnonCls {
 							var ctorField = clsFields.find(function(f) return f.name == "new");
 							if (
 								ctorField == null &&
-								(clsType.isInterface || clsType.constructor == null)
+								(clsType.isInterface || getCtor(clsType) == null)
 							) {
 								clsFields.push(ctorField = {
 									access: [APublic],
@@ -543,7 +548,7 @@ class AnonCls {
 									pos: expr.pos
 								});
 							}
-							if (ctorField != null && needContext) {
+							if (needContext) {
 								ctorField.kind = switch (ctorField.kind) {
 									case FFun(fun):
 										FFun({
