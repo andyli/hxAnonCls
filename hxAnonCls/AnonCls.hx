@@ -148,6 +148,61 @@ class AnonCls {
 		}
 		return _map(e);
 	}
+
+	static function getLocalTVars():Map<String,haxe.macro.Type.TVar> {
+		#if (haxe_ver >= 3.2)
+			return Context.getLocalTVars();
+		#else
+			var vars = Context.getLocalVars();
+			var tvars = new Map();
+			for (v in vars.keys()) {
+				var te = Context.typeExpr({expr:EConst(CIdent(v)), pos:Context.currentPos()});
+				switch (te.expr) {
+					case TLocal(v):
+						tvars[v.name] = v;
+					case _:
+						throw "should be TLocal";
+				}
+			}
+			return tvars;
+		#end
+	}
+
+	static function getLocals(te:haxe.macro.Type.TypedExpr, tvars:Map<String,haxe.macro.Type.TVar>):Array<haxe.macro.Type.TypedExpr> {
+		var tlocals = [];
+		function _map(te:haxe.macro.Type.TypedExpr):haxe.macro.Type.TypedExpr {
+			return switch (te.expr) {
+				case TLocal(v)
+				if (tvars.exists(v.name) && tvars[v.name].id == v.id):
+				tlocals.push(te);
+					te;
+				case _:
+					TypedExprTools.map(te, _map);
+			}
+		}
+		_map(te);
+		return tlocals;
+	}
+
+	static function mapLocals(e:Expr, locals:Array<haxe.macro.Type.TypedExpr>):Expr {
+		function _map(e:Expr):Expr {
+			return switch (e) {
+				case macro $i{ident}
+				if (locals.exists(function(te)
+					return switch (te) {
+						case {expr: TLocal(v), pos: pos}:
+							v.name == ident && posEq(pos, e.pos);
+						case _:
+							false;
+					}
+				)):
+					macro this.___context___.$ident;
+				case _:
+					ExprTools.map(e, _map);
+			}
+		}
+		return _map(e);
+	}
 	#end
 
 	macro static public function make(expr:Expr):Expr {
@@ -305,6 +360,8 @@ class AnonCls {
 
 							var clsFields:Array<Field> = [];
 							var hasParentAcc = false;
+							var locals = [];
+							var localNames = new Map();
 							for (f in fields) {
 								clsFields.push({
 									access: f.access,
@@ -323,6 +380,8 @@ class AnonCls {
 											// trace(TypedExprTools.toString(te));
 											e = Context.getTypedExpr(te);
 											e = mapUnbound(e, getUnbounds(te));
+											locals = getLocals(te, getLocalTVars());
+											e = mapLocals(e, locals);
 											// trace(ExprTools.toString(e));
 											switch (e) {
 												case macro $b{es}:
@@ -369,16 +428,67 @@ class AnonCls {
 								});
 							}
 
-							var needContext = hasParentAcc;
+							for (v in locals.map(function(l) return
+								switch(l.expr) {
+									case TLocal(v): v;
+									case _: throw "should be TLocal";
+								})
+							)
+								localNames[v.name] = v.t;
+
+							var needContext = hasParentAcc || locals.length > 0;
 							var localClass = Context.getLocalClass();
 							var dynamicType = Context.getType("Dynamic");
-							var localClassCt = Context.toComplexType(TInst(localClass, [for (_ in localClass.get().params) dynamicType]));
-							var contextArg = {name:"___context___", type:macro:{___parent___:$localClassCt}};
+							var contextCt = {
+								var fields:Array<Field> = [];
+								if (hasParentAcc) {
+									var localClassCt = Context.toComplexType(TInst(localClass, [for (_ in localClass.get().params) dynamicType]));
+									fields.push({
+										name: "___parent___",
+										kind: FProp("default", "never", localClassCt, null),
+										pos: Context.currentPos(),
+									});
+								}
+								for (v in localNames.keys()) {
+									var vCt = Context.toComplexType(localNames[v]);
+									fields.push({
+										meta: [{name:":optional", params: [], pos: Context.currentPos()}],
+										name: v,
+										kind: FProp("get", "set", vCt),
+										pos: Context.currentPos(),
+									});
+									fields.push({
+										name: "get_" + v,
+										kind: FFun({
+											args: [],
+											ret: vCt,
+											expr: null,
+										}),
+										pos: Context.currentPos(),
+									});
+									fields.push({
+										name: "set_" + v,
+										kind: FFun({
+											args: [{name:"___", type:vCt}],
+											ret: vCt,
+											expr: null,
+										}),
+										pos: Context.currentPos(),
+									});
+								}
+								TAnonymous(fields);
+							};
+							
+							var contextArg = {name:"___context___", type:contextCt};
 
 							if (needContext){
 								var fields = [];
 								if (hasParentAcc) {
 									fields.push({field: "___parent___", expr: macro this});
+								}
+								for (vname in localNames.keys()) {
+									fields.push({field: "get_" + vname, expr: macro function() return $i{vname}});
+									fields.push({field: "set_" + vname, expr: macro function(___) return $i{vname} = ___});
 								}
 								args.push({expr: EObjectDecl(fields), pos: Context.currentPos()});
 

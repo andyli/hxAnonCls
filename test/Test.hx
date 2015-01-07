@@ -178,6 +178,20 @@ class Test extends TestCase {
 		assertEquals("foobar", foobar.foo());
 	}
 
+	public function testLocalVarAccess():Void {
+		var local = "local var";
+		var foobar = AnonCls.make((new IFoo():{
+			public function foo() {
+				return local;
+			}
+
+			public function set():Void local = "changed";
+		}));
+		assertEquals("local var", foobar.foo());
+		foobar.set();
+		assertEquals("changed", local);
+	}
+
 	var privateField = "parent private field";
 
 	static function main():Void {
