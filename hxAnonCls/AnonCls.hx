@@ -107,20 +107,20 @@ class AnonCls {
 		return null;
 	}
 
-	static function getUnbounds(te:haxe.macro.Type.TypedExpr):Map<String,haxe.macro.Type.TypedExpr> {
-		var map = new Map();
+	static function getUnbounds(te:haxe.macro.Type.TypedExpr):Array<haxe.macro.Type.TypedExpr> {
+		var unbounds = [];
 		function _map(te:haxe.macro.Type.TypedExpr):haxe.macro.Type.TypedExpr {
 			return switch (te.expr) {
 				case TLocal(v)
 				if ((untyped v.meta:Metadata).exists(function(m) return m.name == ":unbound")):
-					map[v.name] = te;
+					unbounds.push(te);
 					te;
 				case _:
 					TypedExprTools.map(te, _map);
 			}
 		}
 		_map(te);
-		return map;
+		return unbounds;
 	}
 
 	static function posEq(pos1:Position, pos2:Position):Bool {
@@ -129,10 +129,18 @@ class AnonCls {
 		return pos1.file == pos2.file && pos1.min == pos2.min && pos1.max == pos2.max;
 	}
 
-	static function mapUnbound(e:Expr, unbounds:Map<String,haxe.macro.Type.TypedExpr>):Expr {
+	static function mapUnbound(e:Expr, unbounds:Array<haxe.macro.Type.TypedExpr>):Expr {
 		function _map(e:Expr):Expr {
 			return switch (e) {
-				case macro $i{ident} if (unbounds.exists(ident) && posEq(unbounds[ident].pos, e.pos)):
+				case macro $i{ident}
+				if (unbounds.exists(function(te)
+					return switch (te) {
+						case {expr: TLocal(v), pos: pos}:
+							v.name == ident && posEq(pos, e.pos);
+						case _:
+							false;
+					}
+				)):
 					macro untyped $e;
 				case _:
 					ExprTools.map(e, _map);
