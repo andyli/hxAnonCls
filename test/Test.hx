@@ -184,6 +184,7 @@ class Test extends TestCase {
 		var foobar = AnonCls.make((new AFoo():{
 			public function new():Void {
 				assertEquals("parent private field", privateField);
+				parent.assertEquals("parent private field", privateField);
 			}
 			override public function foo() {
 				assertEquals("afoo", super.foo());
@@ -191,6 +192,16 @@ class Test extends TestCase {
 			}
 		}));
 		assertEquals("foobar", foobar.foo());
+
+		var parent = 123;
+		var foobar = AnonCls.make((new AFoo():{
+			public function new():Void {
+				assertEquals("Test", Type.getClassName(Type.getClass(parent)));
+				assertEquals(789, parent.parent);
+				var parent = 456;
+				assertEquals(456, parent);
+			}
+		}));
 	}
 
 	public function testLocalVarAccess():Void {
@@ -208,6 +219,7 @@ class Test extends TestCase {
 	}
 
 	var privateField = "parent private field";
+	var parent = 789;
 
 	static function main():Void {
 		var runner = new TestRunner();

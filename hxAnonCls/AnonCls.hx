@@ -2,209 +2,14 @@ package hxAnonCls;
 
 import haxe.macro.*;
 #if macro
+import hxAnonCls.Macros.*;
+import hxAnonCls.Names.*;
 import haxe.macro.Expr;
 import tink.macro.Types;
-using StringTools;
 using Lambda;
 #end
 
 class AnonCls {
-	#if macro
-	static function typeToTypePath(t:Type):TypePath {
-		return switch (Context.follow(t)) {
-			case TInst(t, params):
-				var clsType = t.get();
-				{
-					pack:clsType.pack, 
-					name:clsType.module.substring(clsType.module.lastIndexOf(".")+1), 
-					sub:clsType.name,
-					params:[for (p in params) TPType(Context.toComplexType(p))]
-				};
-			case TEnum(t, params):
-				var clsType = t.get();
-				{
-					pack:clsType.pack, 
-					name:clsType.module.substring(clsType.module.lastIndexOf(".")+1), 
-					sub:clsType.name,
-					params:[for (p in params) TPType(Context.toComplexType(p))]
-				};
-			case TType(t, params):
-				var clsType = t.get();
-				{
-					pack:clsType.pack, 
-					name:clsType.module.substring(clsType.module.lastIndexOf(".")+1), 
-					sub:clsType.name,
-					params:[for (p in params) TPType(Context.toComplexType(p))]
-				};
-			case _: throw 'Cannot convert this to TypePath: $t';
-		};
-	}
-
-	static function mapWithHint(expr:Expr):Expr {
-		return switch (expr) {
-			case macro super.$field:
-				macro @:pos(expr.pos) ___super___.$field;
-			case macro super:
-				macro @:pos(expr.pos) ___superNew___;
-			case macro this:
-				macro @:pos(expr.pos) ___this___;
-			case _:
-				ExprTools.map(expr, mapWithHint);
-		}
-	}
-
-	static function unmapWithHint(expr:Expr):Expr {
-		return switch (expr) {
-			case macro ___super___.$field:
-				macro @:pos(expr.pos) super.$field;
-			case macro ___superNew___:
-				macro @:pos(expr.pos) super;
-			case macro ___this___:
-				macro @:pos(expr.pos) this;
-			case _:
-				ExprTools.map(expr, unmapWithHint);
-		}
-	}
-
-	static function addPriAcc(te:haxe.macro.Type.TypedExpr):haxe.macro.Type.TypedExpr {
-		function isPrivateFieldAccess(fa:haxe.macro.Type.FieldAccess):Bool {
-			return switch (fa) {
-				case FInstance(_, cf)
-				   | FStatic(_, cf)
-				   | FClosure(_, cf)
-				if (!cf.get().isPublic):
-					true;
-				case _:
-					false;
-			}
-		}
-		switch (te) {
-			case {expr: TField(e, isPrivateFieldAccess(_) => true), t:t, pos:pos}:
-				return {
-					expr: TMeta(
-						{
-							name: ":privateAccess",
-							params: [],
-							pos: pos
-						},
-						te
-					),
-					t: t,
-					pos: pos
-				}
-			case _:
-		}
-		return TypedExprTools.map(te, addPriAcc);
-	}
-
-	static function getCtor(t:haxe.macro.Type.ClassType):Null<haxe.macro.Type.ClassField> {
-		if (t == null)
-			return null;
-		if (t.constructor != null)
-			return t.constructor.get();
-		if (t.superClass != null)
-			return getCtor(t.superClass.t.get());
-		return null;
-	}
-
-	static function getUnbounds(te:haxe.macro.Type.TypedExpr):Array<haxe.macro.Type.TypedExpr> {
-		var unbounds = [];
-		function _map(te:haxe.macro.Type.TypedExpr):haxe.macro.Type.TypedExpr {
-			return switch (te.expr) {
-				case TLocal(v)
-				if ((untyped v.meta:Metadata).exists(function(m) return m.name == ":unbound")):
-					unbounds.push(te);
-					te;
-				case _:
-					TypedExprTools.map(te, _map);
-			}
-		}
-		_map(te);
-		return unbounds;
-	}
-
-	static function posEq(pos1:Position, pos2:Position):Bool {
-		var pos1 = Context.getPosInfos(pos1);
-		var pos2 = Context.getPosInfos(pos2);
-		return pos1.file == pos2.file && pos1.min == pos2.min && pos1.max == pos2.max;
-	}
-
-	static function mapUnbound(e:Expr, unbounds:Array<haxe.macro.Type.TypedExpr>):Expr {
-		function _map(e:Expr):Expr {
-			return switch (e) {
-				case macro $i{ident}
-				if (unbounds.exists(function(te)
-					return switch (te) {
-						case {expr: TLocal(v), pos: pos}:
-							v.name == ident && posEq(pos, e.pos);
-						case _:
-							false;
-					}
-				)):
-					macro untyped $e;
-				case _:
-					ExprTools.map(e, _map);
-			}
-		}
-		return _map(e);
-	}
-
-	static function getLocalTVars():Map<String,haxe.macro.Type.TVar> {
-		#if (haxe_ver >= 3.2)
-			return Context.getLocalTVars();
-		#else
-			var vars = Context.getLocalVars();
-			var tvars = new Map();
-			for (v in vars.keys()) {
-				var te = Context.typeExpr({expr:EConst(CIdent(v)), pos:Context.currentPos()});
-				switch (te.expr) {
-					case TLocal(v):
-						tvars[v.name] = v;
-					case _:
-						throw "should be TLocal";
-				}
-			}
-			return tvars;
-		#end
-	}
-
-	static function getLocals(te:haxe.macro.Type.TypedExpr, tvars:Map<String,haxe.macro.Type.TVar>):Array<haxe.macro.Type.TypedExpr> {
-		var tlocals = [];
-		function _map(te:haxe.macro.Type.TypedExpr):haxe.macro.Type.TypedExpr {
-			return switch (te.expr) {
-				case TLocal(v)
-				if (tvars.exists(v.name) && tvars[v.name].id == v.id):
-				tlocals.push(te);
-					te;
-				case _:
-					TypedExprTools.map(te, _map);
-			}
-		}
-		_map(te);
-		return tlocals;
-	}
-
-	static function mapLocals(e:Expr, locals:Array<haxe.macro.Type.TypedExpr>):Expr {
-		function _map(e:Expr):Expr {
-			return switch (e) {
-				case macro $i{ident}
-				if (locals.exists(function(te)
-					return switch (te) {
-						case {expr: TLocal(v), pos: pos}:
-							v.name == ident && posEq(pos, e.pos);
-						case _:
-							false;
-					}
-				)):
-					macro this.___context___.$ident;
-				case _:
-					ExprTools.map(e, _map);
-			}
-		}
-		return _map(e);
-	}
-	#end
-
 	macro static public function make(expr:Expr):Expr {
 		switch (expr) {
 			case macro (new $t($a{args}):$extend):
@@ -214,6 +19,13 @@ class AnonCls {
 					case TInst(_t, params):
 						var clsType = _t.get();
 						var posInfo = Context.getPosInfos(expr.pos);
+						var localClass = Context.getLocalClass().get();
+						var localClassCt = TPath({
+							pack:localClass.pack, 
+							name:localClass.module.substring(localClass.module.lastIndexOf(".")+1), 
+							sub:localClass.name,
+							params:[for (p in localClass.params) TPType(macro:Dynamic)]
+						});
 						var localModule = Context.getLocalModule().split(".");
 						var localPack = localModule.copy();
 						var localModuleName = localPack.pop();
@@ -277,11 +89,15 @@ class AnonCls {
 								])
 								.concat([
 									{
-										//___super___
-										macro var ___super___:$ct;
+										//super
+										macro var $superObjName:$ct;
+									},
+									{
+										//parent
+										macro var $parentIdent:$localClassCt = this;
 									},
 									{	
-										//___this___
+										//this
 										//TODO: should not use TExtend, but to construct TAnonymous manually
 										var ct = TExtend([typeToTypePath(t)], [
 											for (f in fields)
@@ -343,15 +159,15 @@ class AnonCls {
 												pos: f.pos,
 											}
 										]);
-										macro var ___this___:$ct;
+										macro var $thisObjName:$ct;
 									}
 								]);
 
 							var ctor = getCtor(clsType);
 							if (ctor != null) {
-								//___superNew___
+								//super()
 								var fType = Context.toComplexType(ctor.type);
-								typeHints.push(macro var ___superNew___:$fType);
+								typeHints.push(macro var $superCtorName:$fType);
 							}
 
 							var clsFields:Array<Field> = [];
@@ -371,7 +187,9 @@ class AnonCls {
 											var te = Context.typeExpr(
 												macro $b{typeHints.concat([mapWithHint(e)])}
 											);
+											var parentHint = getParentHint(te);
 											te = addPriAcc(te);
+											te = mapParent(te, parentHint);
 											// trace(te);
 											// trace(TypedExprTools.toString(te));
 											e = Context.getTypedExpr(te);
@@ -398,7 +216,7 @@ class AnonCls {
 														return switch (e) {
 															case {expr: EConst(CIdent("`")), pos: pos}:
 																hasParentAcc = true;
-																macro @:pos(pos) this.___context___.___parent___;
+																macro @:pos(pos) this.$contextObjName.$parentObjName;
 															case _:
 																ExprTools.map(e, mapParentAcc);
 														}
@@ -433,19 +251,12 @@ class AnonCls {
 								localNames[v.name] = v.t;
 
 							var needContext = hasParentAcc || locals.length > 0;
-							var localClass = Context.getLocalClass().get();
 							var dynamicType = Context.getType("Dynamic");
 							var contextCt = {
 								var fields:Array<Field> = [];
 								if (hasParentAcc) {
-									var localClassCt = TPath({
-										pack:localClass.pack, 
-										name:localClass.module.substring(localClass.module.lastIndexOf(".")+1), 
-										sub:localClass.name,
-										params:[for (p in localClass.params) TPType(macro:Dynamic)]
-									});
 									fields.push({
-										name: "___parent___",
+										name: parentObjName,
 										kind: FProp("default", "never", localClassCt, null),
 										pos: Context.currentPos(),
 									});
@@ -459,7 +270,7 @@ class AnonCls {
 										pos: Context.currentPos(),
 									});
 									fields.push({
-										name: "get_" + v,
+										name: getterName(v),
 										kind: FFun({
 											args: [],
 											ret: vCt,
@@ -468,9 +279,9 @@ class AnonCls {
 										pos: Context.currentPos(),
 									});
 									fields.push({
-										name: "set_" + v,
+										name: setterName(v),
 										kind: FFun({
-											args: [{name:"___", type:vCt}],
+											args: [{name:setterArgName, type:vCt}],
 											ret: vCt,
 											expr: null,
 										}),
@@ -480,16 +291,16 @@ class AnonCls {
 								TAnonymous(fields);
 							};
 							
-							var contextArg = {name:"___context___", type:contextCt};
+							var contextArg = {name:contextObjName, type:contextCt};
 
 							if (needContext){
 								var fields = [];
 								if (hasParentAcc) {
-									fields.push({field: "___parent___", expr: macro this});
+									fields.push({field: parentObjName, expr: macro this});
 								}
 								for (vname in localNames.keys()) {
-									fields.push({field: "get_" + vname, expr: macro function() return $i{vname}});
-									fields.push({field: "set_" + vname, expr: macro function(___) return $i{vname} = ___});
+									fields.push({field: getterName(vname), expr: macro function() return $i{vname}});
+									fields.push({field: setterName(vname), expr: macro function($setterArgName) return $i{vname} = $i{setterArgName}});
 								}
 								args.push({expr: EObjectDecl(fields), pos: Context.currentPos()});
 
@@ -551,7 +362,7 @@ class AnonCls {
 											params: fun.params,
 											args: fun.args.concat([contextArg]),
 											expr: macro {
-												this.___context___ = ___context___;
+												this.$contextObjName = $i{contextObjName};
 												${fun.expr}
 											},
 											ret: fun.ret

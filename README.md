@@ -78,7 +78,7 @@ Notice that:
  * The argument to `AnonCls.make` should be an `ECheckType` expression, which is in the form of `(variable:Type)`. The (extra) parentheses are required.
  * You may use `import hxAnonCls.AnonCls.make in A;`, such that you can create anonymous class with shorter syntax: `A((new Type():{/*... */}))`.
  * Similar to Java, hxAnonCls is able to create anonymous class for both class and interface. A default constructor is added implicitly if it is not provided.
- * Similar to Java, anonymous classes created by hxAnonCls can access the properties and methods of their enclosing classes, including those are private.
+ * Similar to Java, anonymous classes created by hxAnonCls can access the properties and methods of their enclosing classes, including those are private. Use `parent` to reference the enclosing instance. Use `parent.field` or simply `field` to reference the enclosing instance field.
  * Anonymous classes created by hxAnonCls can read/write local variables in the enclosing block, unlike Java, which only allows reading final variables.
 
 # Like hxAnonCls?
