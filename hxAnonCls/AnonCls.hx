@@ -299,11 +299,7 @@ class AnonCls {
 															} else {
 																var sf = existingFields.find(function(ef) return ef.name == f.name);
 																if (sf == null) {
-																	try {
-																		Context.toComplexType(Context.typeof(fun.expr));
-																	} catch (err:Dynamic) {
-																		Context.error("Explict return type needed.", f.pos);
-																	}
+																	Context.error("Explict return type is needed.", f.pos);
 																} else {
 																	switch (sf.type) {
 																		case TFun(args, ret):
@@ -323,7 +319,7 @@ class AnonCls {
 																try {
 																	Context.toComplexType(Context.typeof(e));
 																} catch (err:Dynamic) {
-																	Context.error("Explict type needed.", f.pos);
+																	Context.error("Explict type is needed.", f.pos);
 																}
 															},
 															null
@@ -338,7 +334,7 @@ class AnonCls {
 																try {
 																	Context.toComplexType(Context.typeof(e));
 																} catch (err:Dynamic) {
-																	Context.error("Explict type needed.", f.pos);
+																	Context.error("Explict type is needed.", f.pos);
 																}
 															},
 															null
