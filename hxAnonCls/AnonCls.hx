@@ -176,6 +176,8 @@ class AnonCls {
 							var localNames = new Map();
 							for (f in fields) {
 								clsFields.push({
+									doc: f.doc,
+									meta: f.meta,
 									access: f.access,
 									name: f.name,
 									kind: switch (f.kind) {
@@ -342,15 +344,30 @@ class AnonCls {
 							var ctorField = clsFields.find(function(f) return f.name == "new");
 							if (
 								ctorField == null &&
-								(clsType.isInterface || getCtor(clsType) == null)
+								(needContext || clsType.isInterface || getCtor(clsType) == null)
 							) {
+								var superCtor = getCtor(clsType);
+								var args = if (superCtor == null) [] else switch (superCtor.type) {
+									case TFun(args, _):
+										args;
+									case _:
+										[];
+								};
+								var callArgs = [for (a in args) {
+									var name = a.name;
+									macro $i{name};
+								}];
 								clsFields.push(ctorField = {
 									access: [APublic],
 									name: "new",
 									kind: FFun({
-										args: [],
+										args: [for (a in args) {
+											name: a.name,
+											type: Context.toComplexType(a.t),
+											opt: a.opt
+										}],
 										ret: null,
-										expr: macro {}
+										expr: superCtor == null ? macro {} : macro { super($a{callArgs}); }
 									}),
 									pos: expr.pos
 								});
@@ -361,9 +378,23 @@ class AnonCls {
 										FFun({
 											params: fun.params,
 											args: fun.args.concat([contextArg]),
-											expr: macro {
-												this.$contextObjName = $i{contextObjName};
-												${fun.expr}
+											expr: switch (fun.expr) {
+												case macro super($a{callArgs}):
+													macro {
+														${fun.expr};
+														this.$contextObjName = $i{contextObjName};
+													}
+												case macro $b{exprs} if (exprs.length > 1 && switch (exprs[0]) { case macro super($a{callArgs}): true; case _: false; }):
+													macro {
+														${exprs[0]}
+														this.$contextObjName = $i{contextObjName};
+														$b{exprs.slice(1)}
+													}
+												case _:
+													macro {
+														this.$contextObjName = $i{contextObjName};
+														${fun.expr}
+													}
 											},
 											ret: fun.ret
 										});
