@@ -34,6 +34,13 @@ class AFooPrivateFieldAccess {
 
 abstract AbstractStr(String) from String to String {
 	public function firstChar() return this.charAt(0);
+	public var char(get, set):String;
+	function get_char():String {
+		return firstChar();
+	}
+	function set_char(v):String {
+		return v;
+	}
 }
 
 class ParamTest<T> extends TestCase {
@@ -223,10 +230,15 @@ class Test extends TestCase {
 	}
 
 	public function testAbstract():Void {
+		var a:AbstractStr = "abc";
 		var foobar = AnonCls.make((new IFoo():{
 			public function foo() return ("foo":AbstractStr).firstChar();
+			public function prop():String return a.char;
+			public function setProp():String return a.char = "A";
 		}));
 		assertEquals("f", foobar.foo());
+		assertEquals("a", foobar.prop());
+		assertEquals("A", foobar.setProp());
 	}
 
 	var privateField = "parent private field";

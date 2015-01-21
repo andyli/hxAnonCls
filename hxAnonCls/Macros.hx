@@ -266,7 +266,10 @@ class Macros {
 						var ths = typedExprToExpr(el[0]);
 						var callArgs = el.slice(1).map(typedExprToExpr);
 						var fName = fieldAccessName(fa);
-						macro @:pos(te.pos) ($ths:$abst).$fName($a{callArgs});
+						if (isPrivateFieldAccess(fa))
+							macro @:pos(te.pos) (@:privateAccess ($ths:$abst).$fName)($a{callArgs});
+						else
+							macro @:pos(te.pos) ($ths:$abst).$fName($a{callArgs});
 					case _:
 						throw "should be KAbstractImpl";
 				}
@@ -386,6 +389,8 @@ class Macros {
 				var e = typedExprToExpr(e);
 				{
 					expr: ECast(e, switch (m) {
+						case null:
+							null;
 						case TClassDecl(c):
 							TPath(baseTypeToTypePath(c.get(), [for (p in c.get().params) {
 								TPType(Context.toComplexType(p.t));

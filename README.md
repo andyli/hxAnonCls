@@ -81,6 +81,11 @@ Notice that:
  * Similar to Java, anonymous classes created by hxAnonCls can access the properties and methods of their enclosing classes, including those are private. Use `parent` to reference the enclosing instance. Use `parent.field` or simply `field` to reference the enclosing instance field.
  * Anonymous classes created by hxAnonCls can read/write local variables in the enclosing block, unlike Java, which only allows reading final variables.
 
+## Dependancies
+
+ * Haxe 3.1.3+
+ * tink_macro 0.5.0+ 
+
 # Like hxAnonCls?
 
 Support me to maintain it -> http://www.patreon.com/andyli
