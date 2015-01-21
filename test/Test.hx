@@ -32,6 +32,10 @@ class AFooPrivateFieldAccess {
 	function _private() return "_private";
 }
 
+abstract AbstractStr(String) from String to String {
+	public function firstChar() return this.charAt(0);
+}
+
 class ParamTest<T> extends TestCase {
 	var t:T;
 	public function new(t:T) {
@@ -216,6 +220,13 @@ class Test extends TestCase {
 		assertEquals("local var", foobar.foo());
 		foobar.set();
 		assertEquals("changed", local);
+	}
+
+	public function testAbstract():Void {
+		var foobar = AnonCls.make((new IFoo():{
+			public function foo() return ("foo":AbstractStr).firstChar();
+		}));
+		assertEquals("f", foobar.foo());
 	}
 
 	var privateField = "parent private field";

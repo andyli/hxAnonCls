@@ -8,33 +8,48 @@ using Lambda;
 import hxAnonCls.Names.*;
 
 class Macros {
+	static public function getFirstExpr(expr:Expr):Expr {
+		return switch (expr) {
+			case macro $b{exprs} if (exprs.length >= 1):
+				getFirstExpr(exprs[0]);
+			case macro ($e):
+				getFirstExpr(e);
+			case _: expr;
+		}
+	}
+
 	static public function typeToTypePath(t:Type):TypePath {
 		return switch (Context.follow(t)) {
 			case TInst(t, params):
-				var clsType = t.get();
-				{
-					pack:clsType.pack, 
-					name:clsType.module.substring(clsType.module.lastIndexOf(".")+1), 
-					sub:clsType.name,
-					params:[for (p in params) TPType(Context.toComplexType(p))]
-				};
+				baseTypeToTypePath(t.get(), [for (p in params) TPType(Context.toComplexType(p))]);
 			case TEnum(t, params):
-				var clsType = t.get();
-				{
-					pack:clsType.pack, 
-					name:clsType.module.substring(clsType.module.lastIndexOf(".")+1), 
-					sub:clsType.name,
-					params:[for (p in params) TPType(Context.toComplexType(p))]
-				};
+				baseTypeToTypePath(t.get(), [for (p in params) TPType(Context.toComplexType(p))]);
 			case TType(t, params):
-				var clsType = t.get();
-				{
-					pack:clsType.pack, 
-					name:clsType.module.substring(clsType.module.lastIndexOf(".")+1), 
-					sub:clsType.name,
-					params:[for (p in params) TPType(Context.toComplexType(p))]
-				};
+				baseTypeToTypePath(t.get(), [for (p in params) TPType(Context.toComplexType(p))]);
 			case _: throw 'Cannot convert this to TypePath: $t';
+		};
+	}
+
+	static public function fieldAccessName(fa:FieldAccess):String {
+		return switch (fa) {
+			case FInstance(_, cf),
+			     FStatic(_, cf),
+			     FAnon(cf),
+			     FClosure(_, cf):
+				cf.get().name;
+			case FDynamic(s):
+				s;
+			case FEnum(_, ef):
+				ef.name;
+		}
+	}
+
+	static public function baseTypeToTypePath(t:BaseType, params:Array<TypeParam>):TypePath {
+		return {
+			pack:t.pack, 
+			name:t.module.substring(t.module.lastIndexOf(".")+1), 
+			sub:t.name,
+			params:params
 		};
 	}
 
@@ -64,35 +79,16 @@ class Macros {
 		}
 	}
 
-	static public function addPriAcc(te:TypedExpr):TypedExpr {
-		function isPrivateFieldAccess(fa:FieldAccess):Bool {
-			return switch (fa) {
-				case FInstance(_, cf)
-				   | FStatic(_, cf)
-				   | FClosure(_, cf)
-				if (!cf.get().isPublic):
-					true;
-				case _:
-					false;
-			}
-		}
-		switch (te) {
-			case {expr: TField(e, isPrivateFieldAccess(_) => true), t:t, pos:pos}:
-				return {
-					expr: TMeta(
-						{
-							name: ":privateAccess",
-							params: [],
-							pos: pos
-						},
-						te
-					),
-					t: t,
-					pos: pos
-				}
+	static function isPrivateFieldAccess(fa:FieldAccess):Bool {
+		return switch (fa) {
+			case FInstance(_, cf)
+			   | FStatic(_, cf)
+			   | FClosure(_, cf)
+			if (!cf.get().isPublic):
+				true;
 			case _:
+				false;
 		}
-		return TypedExprTools.map(te, addPriAcc);
 	}
 
 	static public function getCtor(t:ClassType):Null<ClassField> {
@@ -105,46 +101,10 @@ class Macros {
 		return null;
 	}
 
-	static public function getUnbounds(te:TypedExpr):Array<TypedExpr> {
-		var unbounds = [];
-		function _map(te:TypedExpr):TypedExpr {
-			return switch (te.expr) {
-				case TLocal(v)
-				if ((untyped v.meta:Metadata).exists(function(m) return m.name == ":unbound")):
-					unbounds.push(te);
-					te;
-				case _:
-					TypedExprTools.map(te, _map);
-			}
-		}
-		_map(te);
-		return unbounds;
-	}
-
 	static public function posEq(pos1:Position, pos2:Position):Bool {
 		var pos1 = Context.getPosInfos(pos1);
 		var pos2 = Context.getPosInfos(pos2);
 		return pos1.file == pos2.file && pos1.min == pos2.min && pos1.max == pos2.max;
-	}
-
-	static public function mapUnbound(e:Expr, unbounds:Array<TypedExpr>):Expr {
-		function _map(e:Expr):Expr {
-			return switch (e) {
-				case macro $i{ident}
-				if (unbounds.exists(function(te)
-					return switch (te) {
-						case {expr: TLocal(v), pos: pos}:
-							v.name == ident && posEq(pos, e.pos);
-						case _:
-							false;
-					}
-				)):
-					macro untyped $e;
-				case _:
-					ExprTools.map(e, _map);
-			}
-		}
-		return _map(e);
 	}
 
 	static public function getParentHint(te:TypedExpr):TypedExpr {
@@ -230,5 +190,235 @@ class Macros {
 			}
 		}
 		return _map(e);
+	}
+
+	static public function typedExprToExpr(te:TypedExpr):Expr {
+		return switch (te.expr) {
+			// case TConst(c:haxe.macro.TConstant):
+
+			case TLocal(v)
+			if ((untyped v.meta:Metadata).exists(function(m) return m.name == ":unbound")):
+				var vName = v.name;
+				macro @:pos(te.pos) untyped $i{vName};
+
+			// case TLocal():
+
+			case TArray(e1, e2):
+				var e1 = typedExprToExpr(e1);
+				var e2 = typedExprToExpr(e2);
+				macro @:pos(te.pos) $e1[$e2];
+
+			case TBinop(op, e1, e2):
+				var e1 = typedExprToExpr(e1);
+				var e2 = typedExprToExpr(e2);
+				{
+					expr: EBinop(op, e1, e2),
+					pos: te.pos
+				};
+
+			case TField(e, fa):
+				var fName = fieldAccessName(fa);
+				var e = typedExprToExpr(e);
+				if (isPrivateFieldAccess(fa)) {
+					macro @:pos(te.pos) @:privateAccess $e.$fName;
+				} else {
+					macro @:pos(te.pos) $e.$fName;
+				}
+
+			// case TTypeExpr(m:ModuleType):
+
+			case TParenthesis(e):
+				typedExprToExpr(e);
+
+			case TObjectDecl(fields):
+				var fields = [for (f in fields) {
+					field: f.name,
+					expr: typedExprToExpr(f.expr)
+				}];
+				{
+					expr:EObjectDecl(fields),
+					pos:te.pos
+				};
+
+			case TArrayDecl(el):
+				var items = el.map(typedExprToExpr);
+				macro @:pos(te.pos) $a{items};
+
+			/*
+				abstract field call
+			*/
+			case TCall({expr:TField({expr: TTypeExpr(TClassDecl(c))}, fa)}, el)
+			if (c.get().kind.match(KAbstractImpl(_))):
+				switch (c.get().kind) {
+					case KAbstractImpl(a):
+						var a = a.get();
+						var abstp = baseTypeToTypePath(
+							a,
+							[for (p in a.params)
+								TPType(TPath({name:p.name, pack:[""]}))]
+						);
+						if (a.isPrivate) {
+							abstp.pack = [];
+							abstp.name = abstp.sub;
+							abstp.sub = null;
+						}
+						var abst = TPath(abstp);
+						var ths = typedExprToExpr(el[0]);
+						var callArgs = el.slice(1).map(typedExprToExpr);
+						var fName = fieldAccessName(fa);
+						macro @:pos(te.pos) ($ths:$abst).$fName($a{callArgs});
+					case _:
+						throw "should be KAbstractImpl";
+				}
+
+			case TCall(e, el):
+				var e = typedExprToExpr(e);
+				var el = el.map(typedExprToExpr);
+				macro @:pos(te.pos) $e($a{el});
+
+			case TNew(c, params, el):
+				var tp = baseTypeToTypePath(c.get(), [for (p in params) TPType(Context.toComplexType(p))]);
+				var el = el.map(typedExprToExpr);
+				macro @:pos(te.pos) new $tp($a{el});
+
+			case TUnop(op, postFix, e):
+				{
+					expr: EUnop(op, postFix, typedExprToExpr(e)),
+					pos: te.pos
+				}
+
+			case TFunction({t:t, expr:expr, args:args}):
+				{
+					expr: EFunction(null, {
+						ret: Context.toComplexType(t),
+						params: [],
+						expr: typedExprToExpr(expr),
+						args: [for (a in args) {
+							opt: false,
+							name: a.v.name,
+							type: Context.toComplexType(a.v.t),
+							value: a.value == null ? null : typedExprToExpr({
+								expr: TConst(a.value),
+								t: a.v.t,
+								pos: te.pos,
+							})
+						}],
+					}),
+					pos: te.pos
+				}
+			case TVar(v, expr):
+				var vName = v.name;
+				var vType = Context.toComplexType(v.t);
+				if (expr == null) {
+					macro @:pos(te.pos) var $vName:$vType;
+				} else {
+					var expr = typedExprToExpr(expr);
+					macro @:pos(te.pos) var $vName:$vType = $expr;
+				}
+
+			case TBlock(el):
+				var el = el.map(typedExprToExpr);
+				macro @:pos(te.pos) $b{el};
+
+			case TFor(v, e1, e2):
+				var vName = v.name;
+				var e1 = typedExprToExpr(e1);
+				var e2 = typedExprToExpr(e2);
+				macro @:pos(te.pos) for ($i{vName} in $e1) $e2;
+
+			case TIf(econd, eif, eelse):
+				var econd = typedExprToExpr(econd);
+				var eif = typedExprToExpr(eif);
+				if (eelse == null) {
+					macro @:pos(te.pos) if ($econd) $eif;
+				} else {
+					var eelse = typedExprToExpr(eelse);
+					macro @:pos(te.pos) if ($econd) $eif else $eelse;
+				}
+
+			case TWhile(econd, e, normalWhile):
+				var econd = typedExprToExpr(econd);
+				var e = typedExprToExpr(e);
+				if (normalWhile) {
+					macro @:pos(te.pos) while ($econd) $e;
+				} else {
+					macro @:pos(te.pos) do $e while ($econd);
+				}
+
+			case TSwitch(e, cases, edef):
+				{
+					expr: ESwitch(typedExprToExpr(e), [for (c in cases) {
+						values: c.values.map(typedExprToExpr),
+						guard: null,
+						expr: typedExprToExpr(c.expr)
+					}], edef == null ? null : typedExprToExpr(edef)),
+					pos: te.pos
+				}
+
+			case TTry(e, catches):
+				var e = typedExprToExpr(e);
+				{
+					expr: ETry(e, [for (c in catches) {
+						type: Context.toComplexType(c.v.t),
+						name: c.v.name,
+						expr: typedExprToExpr(c.expr)
+					}]),
+					pos: te.pos
+				}
+
+			case TReturn(e):
+				if (e == null) {
+					macro @:pos(te.pos) return;
+				} else {
+					var e = typedExprToExpr(e);
+					macro @:pos(te.pos) return $e;
+				}
+
+			// case TBreak:
+
+			// case TContinue:
+
+			case TThrow(e):
+				var e = typedExprToExpr(e);
+				macro @:pos(te.pos) throw $e;
+
+			case TCast(e, m):
+				var e = typedExprToExpr(e);
+				{
+					expr: ECast(e, switch (m) {
+						case TClassDecl(c):
+							TPath(baseTypeToTypePath(c.get(), [for (p in c.get().params) {
+								TPType(Context.toComplexType(p.t));
+							}]));
+						case TEnumDecl(c):
+							TPath(baseTypeToTypePath(c.get(), [for (p in c.get().params) {
+								TPType(Context.toComplexType(p.t));
+							}]));
+						case TTypeDecl(c):
+							TPath(baseTypeToTypePath(c.get(), [for (p in c.get().params) {
+								TPType(Context.toComplexType(p.t));
+							}]));
+						case TAbstract(c):
+							TPath(baseTypeToTypePath(c.get(), [for (p in c.get().params) {
+								TPType(Context.toComplexType(p.t));
+							}]));
+					}),
+					pos: te.pos
+				}
+
+			case TMeta(m, e1):
+				{
+					expr: EMeta(m, typedExprToExpr(e1)),
+					pos: te.pos
+				}
+
+			case TEnumParameter(e1, ef, index):
+				var e1 = typedExprToExpr(e1);
+				var efName = ef.name;
+				macro @:pos(te.pos) $e1.$efName;
+
+			case _:
+				Context.getTypedExpr(te);
+		}
 	}
 }

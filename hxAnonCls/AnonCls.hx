@@ -190,12 +190,10 @@ class AnonCls {
 												macro $b{typeHints.concat([mapWithHint(e)])}
 											);
 											var parentHint = getParentHint(te);
-											te = addPriAcc(te);
 											te = mapParent(te, parentHint);
 											// trace(te);
 											// trace(TypedExprTools.toString(te));
-											e = Context.getTypedExpr(te);
-											e = mapUnbound(e, getUnbounds(te));
+											e = typedExprToExpr(te);
 											locals = getLocals(te, getLocalTVars());
 											e = mapLocals(e, locals);
 											// trace(ExprTools.toString(e));
@@ -378,17 +376,11 @@ class AnonCls {
 										FFun({
 											params: fun.params,
 											args: fun.args.concat([contextArg]),
-											expr: switch (fun.expr) {
+											expr: switch (getFirstExpr(fun.expr)) {
 												case macro super($a{callArgs}):
 													macro {
 														${fun.expr};
 														this.$contextObjName = $i{contextObjName};
-													}
-												case macro $b{exprs} if (exprs.length > 1 && switch (exprs[0]) { case macro super($a{callArgs}): true; case _: false; }):
-													macro {
-														${exprs[0]}
-														this.$contextObjName = $i{contextObjName};
-														$b{exprs.slice(1)}
 													}
 												case _:
 													macro {
