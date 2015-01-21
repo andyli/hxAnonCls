@@ -2,6 +2,7 @@ package hxAnonCls;
 
 import haxe.macro.*;
 import haxe.macro.Expr;
+import haxe.macro.Type;
 using StringTools;
 using Lambda;
 import hxAnonCls.Names.*;
@@ -63,8 +64,8 @@ class Macros {
 		}
 	}
 
-	static public function addPriAcc(te:haxe.macro.Type.TypedExpr):haxe.macro.Type.TypedExpr {
-		function isPrivateFieldAccess(fa:haxe.macro.Type.FieldAccess):Bool {
+	static public function addPriAcc(te:TypedExpr):TypedExpr {
+		function isPrivateFieldAccess(fa:FieldAccess):Bool {
 			return switch (fa) {
 				case FInstance(_, cf)
 				   | FStatic(_, cf)
@@ -94,7 +95,7 @@ class Macros {
 		return TypedExprTools.map(te, addPriAcc);
 	}
 
-	static public function getCtor(t:haxe.macro.Type.ClassType):Null<haxe.macro.Type.ClassField> {
+	static public function getCtor(t:ClassType):Null<ClassField> {
 		if (t == null)
 			return null;
 		if (t.constructor != null)
@@ -104,9 +105,9 @@ class Macros {
 		return null;
 	}
 
-	static public function getUnbounds(te:haxe.macro.Type.TypedExpr):Array<haxe.macro.Type.TypedExpr> {
+	static public function getUnbounds(te:TypedExpr):Array<TypedExpr> {
 		var unbounds = [];
-		function _map(te:haxe.macro.Type.TypedExpr):haxe.macro.Type.TypedExpr {
+		function _map(te:TypedExpr):TypedExpr {
 			return switch (te.expr) {
 				case TLocal(v)
 				if ((untyped v.meta:Metadata).exists(function(m) return m.name == ":unbound")):
@@ -126,7 +127,7 @@ class Macros {
 		return pos1.file == pos2.file && pos1.min == pos2.min && pos1.max == pos2.max;
 	}
 
-	static public function mapUnbound(e:Expr, unbounds:Array<haxe.macro.Type.TypedExpr>):Expr {
+	static public function mapUnbound(e:Expr, unbounds:Array<TypedExpr>):Expr {
 		function _map(e:Expr):Expr {
 			return switch (e) {
 				case macro $i{ident}
@@ -146,9 +147,9 @@ class Macros {
 		return _map(e);
 	}
 
-	static public function getParentHint(te:haxe.macro.Type.TypedExpr):haxe.macro.Type.TypedExpr {
+	static public function getParentHint(te:TypedExpr):TypedExpr {
 		var parent = null;
-		function _map(te:haxe.macro.Type.TypedExpr) {
+		function _map(te:TypedExpr) {
 			return parent != null ? te : switch (te.expr) {
 				case TVar(v, _) if (v.name == parentIdent):
 					parent = te;
@@ -160,7 +161,7 @@ class Macros {
 		return parent;
 	}
 
-	static public function getLocalTVars():Map<String,haxe.macro.Type.TVar> {
+	static public function getLocalTVars():Map<String,TVar> {
 		#if (haxe_ver >= 3.2)
 			return Context.getLocalTVars();
 		#else
@@ -179,9 +180,9 @@ class Macros {
 		#end
 	}
 
-	static public function getLocals(te:haxe.macro.Type.TypedExpr, tvars:Map<String,haxe.macro.Type.TVar>):Array<haxe.macro.Type.TypedExpr> {
+	static public function getLocals(te:TypedExpr, tvars:Map<String,TVar>):Array<TypedExpr> {
 		var tlocals = [];
-		function _map(te:haxe.macro.Type.TypedExpr):haxe.macro.Type.TypedExpr {
+		function _map(te:TypedExpr):TypedExpr {
 			return switch (te.expr) {
 				case TLocal(v)
 				if (tvars.exists(v.name) && tvars[v.name].id == v.id):
@@ -195,8 +196,8 @@ class Macros {
 		return tlocals;
 	}
 
-	static public function mapParent(te:haxe.macro.Type.TypedExpr, parentHint:haxe.macro.Type.TypedExpr):haxe.macro.Type.TypedExpr {
-		function _map(te:haxe.macro.Type.TypedExpr):haxe.macro.Type.TypedExpr {
+	static public function mapParent(te:TypedExpr, parentHint:TypedExpr):TypedExpr {
+		function _map(te:TypedExpr):TypedExpr {
 			return switch [te, parentHint] {
 				case [{expr: TLocal(v)}, {expr:TVar(hv, parentThis)}]
 				if (v.id == hv.id):
@@ -208,7 +209,7 @@ class Macros {
 		return _map(te);
 	}
 
-	static public function mapLocals(e:Expr, locals:Array<haxe.macro.Type.TypedExpr>):Expr {
+	static public function mapLocals(e:Expr, locals:Array<TypedExpr>):Expr {
 		function _map(e:Expr):Expr {
 			return switch (e) {
 				case macro $i{ident}
