@@ -258,7 +258,9 @@ class Test extends TestCase {
 		runner.add(new pack.Packed());
 		runner.add(new ParamTest(123));
 		runner.add(new SugarTest());
+		#if (haxe_ver >= 3.2)
 		addBuildAllTest();
+		#end
 		var success = runner.run();
 		#if (sys || nodejs)
 		Sys.exit(success ? 0 : 1);
