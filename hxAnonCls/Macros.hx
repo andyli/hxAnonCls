@@ -117,10 +117,15 @@ class Macros {
 
 	static function fieldAccessName(fa:FieldAccess):String {
 		return switch (fa) {
-			case FInstance(_, cf),
-			     FStatic(_, cf),
-			     FAnon(cf),
-			     FClosure(_, cf):
+			case
+				#if (haxe_ver >= 3.2)
+					FInstance(_, _, cf),
+				#else
+					FInstance(_, cf),
+				#end
+				FStatic(_, cf),
+				FAnon(cf),
+				FClosure(_, cf):
 				cf.get().name;
 			case FDynamic(s):
 				s;
@@ -166,9 +171,14 @@ class Macros {
 
 	static function isPrivateFieldAccess(fa:FieldAccess):Bool {
 		return switch (fa) {
-			case FInstance(_, cf)
-			   | FStatic(_, cf)
-			   | FClosure(_, cf)
+			case
+				#if (haxe_ver >= 3.2)
+					FInstance(_, _, cf)
+				#else
+					FInstance(_, cf)
+				#end
+			|	FStatic(_, cf)
+			|	FClosure(_, cf)
 			if (!cf.get().isPublic):
 				true;
 			case _:
