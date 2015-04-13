@@ -8,6 +8,48 @@ using Lambda;
 import hxAnonCls.Names.*;
 
 class Macros {
+	static public function tohxAnonClsExpr(e:Null<Expr>, typeHints:Array<Expr>, locals:Array<TypedExpr>):{
+		e: Null<Expr>,
+		hasParentAcc: Bool
+	} {
+		return if (e != null) {
+			var te = Context.typeExpr(
+				macro $b{typeHints.concat([mapWithHint(e)])}
+			);
+			var parentHint = getParentHint(te);
+			te = mapParent(te, parentHint);
+			e = typedExprToExpr(te);
+			getLocals(te, getLocalTVars(), locals);
+			e = mapLocals(e, locals);
+			switch (e) {
+				case macro $b{es}:
+					// for (e in es) {
+					// 	trace(ExprTools.toString(e));
+					// }
+					var laste = es[es.length-1];
+					laste = unmapWithHint(laste);
+					var hasParentAcc = false;
+					function mapParentAcc(e:Expr):Expr {
+						return switch (e) {
+							case {expr: EConst(CIdent("`")), pos: pos}:
+								hasParentAcc = true;
+								macro @:pos(pos) this.$contextObjName.$parentObjName;
+							case _:
+								ExprTools.map(e, mapParentAcc);
+						}
+					}
+					laste = mapParentAcc(laste);
+					{
+						e: laste,
+						hasParentAcc: hasParentAcc
+					}
+				case _: throw e;
+			}
+		} else {
+			e: e,
+			hasParentAcc: false
+		}
+	}
 	static public function getFirstExpr(expr:Expr):Expr {
 		return switch (expr) {
 			case macro $b{exprs} if (exprs.length >= 1):
@@ -140,20 +182,20 @@ class Macros {
 		#end
 	}
 
-	static public function getLocals(te:TypedExpr, tvars:Map<String,TVar>):Array<TypedExpr> {
-		var tlocals = [];
+	static public function getLocals(te:TypedExpr, tvars:Map<String,TVar>, out:Array<TypedExpr>):Array<TypedExpr> {
+		if (out == null) out = [];
 		function _map(te:TypedExpr):TypedExpr {
 			return switch (te.expr) {
 				case TLocal(v)
 				if (tvars.exists(v.name) && tvars[v.name].id == v.id):
-				tlocals.push(te);
+				out.push(te);
 					te;
 				case _:
 					TypedExprTools.map(te, _map);
 			}
 		}
 		_map(te);
-		return tlocals;
+		return out;
 	}
 
 	static public function mapParent(te:TypedExpr, parentHint:TypedExpr):TypedExpr {

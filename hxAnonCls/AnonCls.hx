@@ -99,67 +99,67 @@ class AnonCls {
 									{	
 										//this
 										//TODO: should not use TExtend, but to construct TAnonymous manually
-										var ct = TExtend([typeToTypePath(t)], [
-											for (f in fields)
-											if (!existingFields.exists(function(ef) return ef.name == f.name || f.name == "new"))
-											{
-												access: [for (a in f.access) if (a != AInline) a],
-												name: f.name,
-												kind: switch (f.kind) {
-													case FFun(fun):
-														FFun({
-															params: fun.params,
-															args: fun.args,
-															ret: if (fun.ret != null) {
-																fun.ret;
-															} else {
-																var sf = existingFields.find(function(ef) return ef.name == f.name);
-																if (sf == null) {
-																	Context.error("Explict return type is needed.", f.pos);
-																} else {
-																	switch (sf.type) {
-																		case TFun(args, ret):
-																			Context.toComplexType(ret);
-																		case _:
-																			throw sf.type;
-																	}
-																}
-															},
-															expr: null
-														});
-													case FVar(t, e):
-														FVar(
-															if (t != null || e == null) {
-																t;
-															} else {
-																try {
-																	Context.toComplexType(Context.typeof(e));
-																} catch (err:Dynamic) {
-																	Context.error("Explict type is needed.", f.pos);
-																}
-															},
-															null
-														);
-													case FProp(get, set, t, e):
-														FProp(
-															get,
-															set,
-															if (t != null || e == null) {
-																t;
-															} else {
-																try {
-																	Context.toComplexType(Context.typeof(e));
-																} catch (err:Dynamic) {
-																	Context.error("Explict type is needed.", f.pos);
-																}
-															},
-															null
-														);
-												},
-												pos: f.pos,
-											}
-										]);
-										macro var $thisObjName:$ct;
+										// var ct = TExtend([typeToTypePath(t)], [
+										// 	for (f in fields)
+										// 	if (!existingFields.exists(function(ef) return ef.name == f.name || f.name == "new"))
+										// 	{
+										// 		access: [for (a in f.access) if (a != AInline) a],
+										// 		name: f.name,
+										// 		kind: switch (f.kind) {
+										// 			case FFun(fun):
+										// 				FFun({
+										// 					params: fun.params,
+										// 					args: fun.args,
+										// 					ret: if (fun.ret != null) {
+										// 						fun.ret;
+										// 					} else {
+										// 						var sf = existingFields.find(function(ef) return ef.name == f.name);
+										// 						if (sf == null) {
+										// 							Context.error("Explict return type is needed.", f.pos);
+										// 						} else {
+										// 							switch (sf.type) {
+										// 								case TFun(args, ret):
+										// 									Context.toComplexType(ret);
+										// 								case _:
+										// 									throw sf.type;
+										// 							}
+										// 						}
+										// 					},
+										// 					expr: null
+										// 				});
+										// 			case FVar(t, e):
+										// 				FVar(
+										// 					if (t != null || e == null) {
+										// 						t;
+										// 					} else {
+										// 						try {
+										// 							Context.toComplexType(Context.typeof(e));
+										// 						} catch (err:Dynamic) {
+										// 							Context.error("Explict type is needed.", f.pos);
+										// 						}
+										// 					},
+										// 					null
+										// 				);
+										// 			case FProp(get, set, t, e):
+										// 				FProp(
+										// 					get,
+										// 					set,
+										// 					if (t != null || e == null) {
+										// 						t;
+										// 					} else {
+										// 						try {
+										// 							Context.toComplexType(Context.typeof(e));
+										// 						} catch (err:Dynamic) {
+										// 							Context.error("Explict type is needed.", f.pos);
+										// 						}
+										// 					},
+										// 					null
+										// 				);
+										// 		},
+										// 		pos: f.pos,
+										// 	}
+										// ]);
+										macro var $thisObjName:Dynamic;
 									}
 								]);
 
@@ -181,60 +181,45 @@ class AnonCls {
 									access: f.access,
 									name: f.name,
 									kind: switch (f.kind) {
+										case FVar(t, e):
+											var ae = tohxAnonClsExpr(e, typeHints, locals);
+											e = ae.e;
+											if (ae.hasParentAcc) hasParentAcc = true;
+											if (t != null) {
+												t = Context.toComplexType(Context.typeof(macro (untyped null:$t)));
+											}
+											FVar(t, e);
+										case FProp(get, set, t, e):
+											var ae = tohxAnonClsExpr(e, typeHints, locals);
+											e = ae.e;
+											if (ae.hasParentAcc) hasParentAcc = true;
+											if (t != null) {
+												t = Context.toComplexType(Context.typeof(macro (untyped null:$t)));
+											}
+											FProp(get, set, t, e);
 										case FFun(fun):
 											var e = {
 												expr: EFunction(f.name, fun),
 												pos: f.pos
 											};
-											var te = Context.typeExpr(
-												macro $b{typeHints.concat([mapWithHint(e)])}
-											);
-											var parentHint = getParentHint(te);
-											te = mapParent(te, parentHint);
-											// trace(te);
-											// trace(TypedExprTools.toString(te));
-											e = typedExprToExpr(te);
-											locals = getLocals(te, getLocalTVars());
-											e = mapLocals(e, locals);
-											// trace(ExprTools.toString(e));
-											switch (e) {
-												case macro $b{es}:
-													var laste = 
-													switch (es[es.length-1]) {
-														case macro {
-															var $name:$type = $efun;
-															$_;
-														}:
-															// trace(name);
-															efun;
-														case e:
-															throw ExprTools.toString(e); 
-													}
-													laste = unmapWithHint(laste);
 
-													function mapParentAcc(e:Expr):Expr {
-														return switch (e) {
-															case {expr: EConst(CIdent("`")), pos: pos}:
-																hasParentAcc = true;
-																macro @:pos(pos) this.$contextObjName.$parentObjName;
-															case _:
-																ExprTools.map(e, mapParentAcc);
-														}
-													}
-													laste = mapParentAcc(laste);
-													switch (laste) {
-														case ue = {expr:EFunction(_, fun)}:
-															// trace(ExprTools.toString(ue));
-															FFun({
-																params: fun.params,
-																args: fun.args,
-																ret: f.name == "new" ? null : fun.ret,
-																expr: fun.expr,
-															});
-														case e:
-															throw e;
-													}
-												case _: throw e;
+											var ae = tohxAnonClsExpr(e, typeHints, locals);
+											e = ae.e;
+											if (ae.hasParentAcc) hasParentAcc = true;
+
+											switch (e) {
+												case macro {
+													var $name:$type = ${{expr:EFunction(_, fun)}};
+													$_;
+												}:
+													FFun({
+														params: fun.params,
+														args: fun.args,
+														ret: f.name == "new" ? null : fun.ret,
+														expr: fun.expr,
+													});
+												case e:
+													throw ExprTools.toString(e); 
 											}
 										case _: f.kind;
 									},
@@ -410,6 +395,11 @@ class AnonCls {
 							}
 
 							Context.defineType(typeDef);
+
+							// var printer = new haxe.macro.Printer();
+							// var str = printer.printTypeDefinition(typeDef);
+							// sys.io.File.saveContent("dump/" + typeDef.pack.join(".") + "." + typeDef.name + ".hx", str);
+
 							// Context.defineModule(
 							// 	localModule.join("."),
 							// 	[typeDef]

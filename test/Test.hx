@@ -3,6 +3,7 @@ import hxAnonCls.AnonCls;
 import hxAnonCls.AnonCls.make in A;
 using Lambda;
 using Std;
+import haxe.Template;
 import haxe.Json.*;
 
 interface IFoo {
@@ -158,6 +159,18 @@ class Test extends TestCase {
 
 	public function testUsing():Void {
 		var foobar = AnonCls.make((new IFoo():{
+			var v1:Template;
+			var v2 = new Template("");
+			var v3 = {
+				var t = new Template("");
+				t;
+			}
+			var p1(default,null):Template;
+			var p2(default,null) = new Template("");
+			var p3(default,null) = {
+				var t = new Template("");
+				t;
+			}
 			public function foo()
 				return [1, 2, 3]
 					.array()
