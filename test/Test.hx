@@ -249,6 +249,9 @@ class Test extends TestCase {
 		runner.add(new pack.Packed());
 		runner.add(new ParamTest(123));
 		runner.add(new SugarTest());
+		if (hxAnonCls.Macros.isBuildAll()) {
+			runner.add(new BuildAllTest());
+		}
 		var success = runner.run();
 		#if (sys || nodejs)
 		Sys.exit(success ? 0 : 1);

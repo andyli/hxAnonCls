@@ -47,4 +47,5 @@ script:
   - haxe -main Test -cp test -lib tink_macro -debug -as3 bin/as3
   - if [ "${TRAVIS_HAXE_VERSION}" = "development" ]; then
     haxe -main Test -cp test -lib tink_macro -debug -python bin/Test.py && python3 bin/Test.py;
+    haxe -main Test -cp test -lib tink_macro -debug --interp --macro "hxAnonCls.Macros.buildAll()"
     fi

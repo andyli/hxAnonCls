@@ -9,6 +9,20 @@ import hxAnonCls.Names.*;
 
 @:allow(hxAnonCls)
 class Macros {
+	#if (haxe_ver >= 3.2)
+	static var _isBuildAll = false;
+	macro static public function isBuildAll():ExprOf<Bool> {
+		return macro $v{_isBuildAll};
+	}
+	#if macro
+	static public function buildAll():Void {
+		Compiler.addGlobalMetadata("", "@:build(hxAnonCls.Macros.build())");
+		_isBuildAll = true;
+	}
+	#end
+	#end
+
+	#if macro
 	static public function build():Array<Field> {
 		var fields = Context.getBuildFields();
 		for (f in fields) {
@@ -31,7 +45,9 @@ class Macros {
 		return switch (e) {
 			case macro (new $t($a{args}):$extend)
 			if (extend.match(TAnonymous(_))):
-				macro hxAnonCls.AnonCls.make($e);
+				macro @:pos(e.pos) hxAnonCls.AnonCls.make($e);
+			case null:
+				null;
 			case _:
 				ExprTools.map(e, mapCheckType);
 		}
@@ -498,4 +514,5 @@ class Macros {
 				Context.getTypedExpr(te);
 		}
 	}
+	#end
 }

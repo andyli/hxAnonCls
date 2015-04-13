@@ -12,6 +12,8 @@ using Lambda;
 class AnonCls {
 	macro static public function make(expr:Expr):Expr {
 		switch (expr) {
+			case macro hxAnonCls.AnonCls.make($_): //in case the expr is wrapped by build macros
+				return expr;
 			case macro (new $t($a{args}):$extend):
 				var ct = TPath(t);
 				var t = Context.follow(Context.typeof(macro (null:$ct)));
@@ -36,7 +38,7 @@ class AnonCls {
 						} catch(err:Dynamic) {
 							var fields = switch (extend) {
 								case TAnonymous(fields): fields;
-								case _: throw "It should be used in the form of `AnonCls.make((new MyClass():{ override public function xxx() return 'something'; }))`";
+								case _: Context.error("It should be used in the form of `AnonCls.make((new MyClass():{ override public function xxx() return 'something'; }))`", expr.pos);
 							};
 
 							var existingFields = switch (Types.getFields(t)) {
@@ -420,10 +422,10 @@ class AnonCls {
 						var tPath = { pack:[], name:localModuleName, sub:clsName };
 						return macro new $tPath($a{args});
 					default:
-						throw "Only able to create anonymous class of class or interface.";
+						Context.error("Only able to create anonymous class of class or interface.", expr.pos);
 				}
 			default:
-				throw "It should be used in the form of `AnonCls.make((new MyClass():{ override public function xxx() return 'something'; }))`";
+				Context.error("It should be used in the form of `AnonCls.make((new MyClass():{ override public function xxx() return 'something'; }))`", expr.pos);
 		}
 		return macro {};
 	}
