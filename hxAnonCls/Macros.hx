@@ -7,8 +7,37 @@ using StringTools;
 using Lambda;
 import hxAnonCls.Names.*;
 
+@:allow(hxAnonCls)
 class Macros {
-	static public function tohxAnonClsExpr(e:Null<Expr>, typeHints:Array<Expr>, locals:Array<TypedExpr>):{
+	static public function build():Array<Field> {
+		var fields = Context.getBuildFields();
+		for (f in fields) {
+			f.kind = switch (f.kind) {
+				case FFun(f):
+					FFun({
+						args: f.args,
+						params: f.params,
+						expr: mapCheckType(f.expr),
+						ret: f.ret
+					});
+				case _: //TODO
+					f.kind;
+			}
+		}
+		return fields;
+	}
+
+	static function mapCheckType(e:Expr):Expr {
+		return switch (e) {
+			case macro (new $t($a{args}):$extend)
+			if (extend.match(TAnonymous(_))):
+				macro hxAnonCls.AnonCls.make($e);
+			case _:
+				ExprTools.map(e, mapCheckType);
+		}
+	}
+
+	static function tohxAnonClsExpr(e:Null<Expr>, typeHints:Array<Expr>, locals:Array<TypedExpr>):{
 		e: Null<Expr>,
 		hasParentAcc: Bool
 	} {
@@ -50,7 +79,8 @@ class Macros {
 			hasParentAcc: false
 		}
 	}
-	static public function getFirstExpr(expr:Expr):Expr {
+
+	static function getFirstExpr(expr:Expr):Expr {
 		return switch (expr) {
 			case macro $b{exprs} if (exprs.length >= 1):
 				getFirstExpr(exprs[0]);
@@ -60,7 +90,7 @@ class Macros {
 		}
 	}
 
-	static public function typeToTypePath(t:Type):TypePath {
+	static function typeToTypePath(t:Type):TypePath {
 		return switch (Context.follow(t)) {
 			case TInst(t, params):
 				baseTypeToTypePath(t.get(), [for (p in params) TPType(Context.toComplexType(p))]);
@@ -72,7 +102,7 @@ class Macros {
 		};
 	}
 
-	static public function fieldAccessName(fa:FieldAccess):String {
+	static function fieldAccessName(fa:FieldAccess):String {
 		return switch (fa) {
 			case FInstance(_, cf),
 			     FStatic(_, cf),
@@ -86,7 +116,7 @@ class Macros {
 		}
 	}
 
-	static public function baseTypeToTypePath(t:BaseType, params:Array<TypeParam>):TypePath {
+	static function baseTypeToTypePath(t:BaseType, params:Array<TypeParam>):TypePath {
 		return {
 			pack:t.pack, 
 			name:t.module.substring(t.module.lastIndexOf(".")+1), 
@@ -95,7 +125,7 @@ class Macros {
 		};
 	}
 
-	static public function mapWithHint(expr:Expr):Expr {
+	static function mapWithHint(expr:Expr):Expr {
 		return switch (expr) {
 			case macro super.$field:
 				macro @:pos(expr.pos) $i{superObjName}.$field;
@@ -108,7 +138,7 @@ class Macros {
 		}
 	}
 
-	static public function unmapWithHint(expr:Expr):Expr {
+	static function unmapWithHint(expr:Expr):Expr {
 		return switch (expr) {
 			case macro $i{_superObjName}.$field if (_superObjName == superObjName):
 				macro @:pos(expr.pos) super.$field;
@@ -133,7 +163,7 @@ class Macros {
 		}
 	}
 
-	static public function getCtor(t:ClassType):Null<ClassField> {
+	static function getCtor(t:ClassType):Null<ClassField> {
 		if (t == null)
 			return null;
 		if (t.constructor != null)
@@ -143,13 +173,13 @@ class Macros {
 		return null;
 	}
 
-	static public function posEq(pos1:Position, pos2:Position):Bool {
+	static function posEq(pos1:Position, pos2:Position):Bool {
 		var pos1 = Context.getPosInfos(pos1);
 		var pos2 = Context.getPosInfos(pos2);
 		return pos1.file == pos2.file && pos1.min == pos2.min && pos1.max == pos2.max;
 	}
 
-	static public function getParentHint(te:TypedExpr):TypedExpr {
+	static function getParentHint(te:TypedExpr):TypedExpr {
 		var parent = null;
 		function _map(te:TypedExpr) {
 			return parent != null ? te : switch (te.expr) {
@@ -163,7 +193,7 @@ class Macros {
 		return parent;
 	}
 
-	static public function getLocalTVars():Map<String,TVar> {
+	static function getLocalTVars():Map<String,TVar> {
 		#if (haxe_ver >= 3.2)
 			return Context.getLocalTVars();
 		#else
@@ -182,7 +212,7 @@ class Macros {
 		#end
 	}
 
-	static public function getLocals(te:TypedExpr, tvars:Map<String,TVar>, out:Array<TypedExpr>):Array<TypedExpr> {
+	static function getLocals(te:TypedExpr, tvars:Map<String,TVar>, out:Array<TypedExpr>):Array<TypedExpr> {
 		if (out == null) out = [];
 		function _map(te:TypedExpr):TypedExpr {
 			return switch (te.expr) {
@@ -198,7 +228,7 @@ class Macros {
 		return out;
 	}
 
-	static public function mapParent(te:TypedExpr, parentHint:TypedExpr):TypedExpr {
+	static function mapParent(te:TypedExpr, parentHint:TypedExpr):TypedExpr {
 		function _map(te:TypedExpr):TypedExpr {
 			return switch [te, parentHint] {
 				case [{expr: TLocal(v)}, {expr:TVar(hv, parentThis)}]
@@ -211,7 +241,7 @@ class Macros {
 		return _map(te);
 	}
 
-	static public function mapLocals(e:Expr, locals:Array<TypedExpr>):Expr {
+	static function mapLocals(e:Expr, locals:Array<TypedExpr>):Expr {
 		function _map(e:Expr):Expr {
 			return switch (e) {
 				case macro $i{ident}
@@ -234,7 +264,7 @@ class Macros {
 		return _map(e);
 	}
 
-	static public function typedExprToExpr(te:TypedExpr):Expr {
+	static function typedExprToExpr(te:TypedExpr):Expr {
 		return switch (te.expr) {
 			// case TConst(c:haxe.macro.TConstant):
 

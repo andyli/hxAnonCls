@@ -44,20 +44,6 @@ abstract AbstractStr(String) from String to String {
 	}
 }
 
-class ParamTest<T> extends TestCase {
-	var t:T;
-	public function new(t:T) {
-		super();
-		this.t = t;
-	}
-	public function test():Void {
-		var foobar = AnonCls.make((new IFoo():{
-			public function foo() return t.string();
-		}));
-		assertEquals(t.string(), foobar.foo());
-	}
-}
-
 class Test extends TestCase {
 	public function testInterface():Void {
 		var foobar = AnonCls.make((new IFoo():{
@@ -262,6 +248,7 @@ class Test extends TestCase {
 		runner.add(new Test());
 		runner.add(new pack.Packed());
 		runner.add(new ParamTest(123));
+		runner.add(new SugarTest());
 		var success = runner.run();
 		#if (sys || nodejs)
 		Sys.exit(success ? 0 : 1);
