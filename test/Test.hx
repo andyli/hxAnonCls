@@ -243,18 +243,26 @@ class Test extends TestCase {
 	var privateField = "parent private field";
 	var parent = 789;
 
+	macro static function addBuildAllTest() {
+		if (hxAnonCls.Macros.isBuildAll) {
+			return macro runner.add(new BuildAllTest());
+		} else {
+			return macro {};
+		}
+	}
+
+	#if !macro
 	static function main():Void {
 		var runner = new TestRunner();
 		runner.add(new Test());
 		runner.add(new pack.Packed());
 		runner.add(new ParamTest(123));
 		runner.add(new SugarTest());
-		if (hxAnonCls.Macros.isBuildAll()) {
-			runner.add(new BuildAllTest());
-		}
+		addBuildAllTest();
 		var success = runner.run();
 		#if (sys || nodejs)
 		Sys.exit(success ? 0 : 1);
 		#end
 	}
+	#end
 }

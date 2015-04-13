@@ -10,14 +10,11 @@ import hxAnonCls.Names.*;
 @:allow(hxAnonCls)
 class Macros {
 	#if (haxe_ver >= 3.2)
-	static var _isBuildAll = false;
-	macro static public function isBuildAll():ExprOf<Bool> {
-		return macro $v{_isBuildAll};
-	}
+	static public var isBuildAll(default, null) = false;
 	#if macro
 	static public function buildAll():Void {
 		Compiler.addGlobalMetadata("", "@:build(hxAnonCls.Macros.build())");
-		_isBuildAll = true;
+		isBuildAll = true;
 	}
 	#end
 	#end
