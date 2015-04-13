@@ -1,0 +1,13 @@
+{
+	"name": "hxAnonCls",
+	"url" : "https://github.com/andyli/hxAnonCls",
+	"license": "MIT",
+	"tags": ["cross", "macro"],
+	"description": "Java style Anonymous Classes in Haxe.",
+	"version": "0.1.0",
+	"releasenote": "Initial release.",
+	"contributors": ["andyli"],
+	"dependencies": {
+		"tink_macro": "~0.5.0"
+	}
+}
