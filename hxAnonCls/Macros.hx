@@ -325,10 +325,21 @@ class Macros {
 				case TField(e, fa):
 					var fName = fieldAccessName(fa);
 					var e = typedExprToExpr(e);
-					if (isPrivateFieldAccess(fa)) {
-						macro @:pos(te.pos) @:privateAccess $e.$fName;
-					} else {
+					var dynamicAccess = switch (fa) {
+						case FDynamic(_):
+							true;
+						case _:
+							false;
+					}
+					e = if (fa.match(FDynamic(_)))
+						macro @:pos(te.pos) (cast $e).$fName;
+					else
 						macro @:pos(te.pos) $e.$fName;
+
+					if (isPrivateFieldAccess(fa)) {
+						macro @:pos(te.pos) @:privateAccess $e;
+					} else {
+						macro @:pos(te.pos) $e;
 					}
 
 				// case TTypeExpr(m:ModuleType):
