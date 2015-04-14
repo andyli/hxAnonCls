@@ -325,12 +325,6 @@ class Macros {
 				case TField(e, fa):
 					var fName = fieldAccessName(fa);
 					var e = typedExprToExpr(e);
-					var dynamicAccess = switch (fa) {
-						case FDynamic(_):
-							true;
-						case _:
-							false;
-					}
 					e = if (fa.match(FDynamic(_)))
 						macro @:pos(te.pos) (cast $e).$fName;
 					else
