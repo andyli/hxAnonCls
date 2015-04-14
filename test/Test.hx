@@ -248,6 +248,15 @@ class Test extends TestCase {
 		assertEquals("A", foobar.setProp());
 	}
 
+	static function _testInStatic():IFoo {
+		return AnonCls.make((new IFoo():{
+			public function foo() return "testInterface";
+		}));
+	}
+	public function testInStatic():Void {
+		assertEquals("testInterface", _testInStatic().foo());
+	}
+
 	var privateField = "parent private field";
 	var parent = 789;
 

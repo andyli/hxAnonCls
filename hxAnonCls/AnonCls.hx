@@ -23,8 +23,8 @@ class AnonCls {
 						var posInfo = Context.getPosInfos(expr.pos);
 						var localClass = Context.getLocalClass().get();
 						var localClassCt = TPath({
-							pack:localClass.pack, 
-							name:localClass.module.substring(localClass.module.lastIndexOf(".")+1), 
+							pack:localClass.pack,
+							name:localClass.module.substring(localClass.module.lastIndexOf(".")+1),
 							sub:localClass.name,
 							params:[for (p in localClass.params) TPType(macro:Dynamic)]
 						});
@@ -32,7 +32,7 @@ class AnonCls {
 						var localPack = localModule.copy();
 						var localModuleName = localPack.pop();
 						var clsName = localModuleName + "_" + clsType.name + "_" + posInfo.min;
-						
+
 						try {
 							var type = Context.getType(localModule.join(".") + "." + clsName);
 						} catch(err:Dynamic) {
@@ -40,6 +40,7 @@ class AnonCls {
 								case TAnonymous(fields): fields;
 								case _: Context.error("It should be used in the form of `AnonCls.make((new MyClass():{ override public function xxx() return 'something'; }))`", expr.pos);
 							};
+							// trace(fields);
 
 							var existingFields = switch (Types.getFields(t)) {
 								case Failure(err): Context.error(err.message, err.pos);
@@ -60,7 +61,7 @@ class AnonCls {
 										var fName = f.name;
 										switch (f.kind) {
 											case FFun(fun):
-												var existingType = 
+												var existingType =
 												switch (existingFields.find(function(f) return f.name == fName))
 												{
 													case null:
@@ -95,10 +96,6 @@ class AnonCls {
 										macro var $superObjName:$ct;
 									},
 									{
-										//parent
-										macro var $parentIdent:$localClassCt = this;
-									},
-									{	
 										//this
 										//TODO: should not use TExtend, but to construct TAnonymous manually
 										// var ct = TExtend([typeToTypePath(t)], [
@@ -165,6 +162,22 @@ class AnonCls {
 									}
 								]);
 
+							// It may be inside a static function, where `this` cannot be used.
+							try {
+								Context.typeof(macro this);
+								typeHints.push(
+								{
+									//parent
+									macro var $parentIdent:$localClassCt = this;
+								});
+							} catch(e:Dynamic){
+								typeHints.push(
+								{
+									//parent
+									macro var $parentIdent = null;
+								});
+							}
+
 							var ctor = getCtor(clsType);
 							if (ctor != null) {
 								//super()
@@ -221,7 +234,7 @@ class AnonCls {
 														expr: fun.expr,
 													});
 												case e:
-													throw ExprTools.toString(e); 
+													throw ExprTools.toString(e);
 											}
 										case _: f.kind;
 									},
@@ -277,7 +290,7 @@ class AnonCls {
 								}
 								TAnonymous(fields);
 							};
-							
+
 							var contextArg = {name:contextObjName, type:contextCt};
 
 							if (needContext){
@@ -325,7 +338,7 @@ class AnonCls {
 							// 	}),
 							// 	pos: Context.currentPos(),
 							// });
-							
+
 							var ctorField = clsFields.find(function(f) return f.name == "new");
 							if (
 								ctorField == null &&
@@ -382,7 +395,7 @@ class AnonCls {
 								}
 							}
 
-							
+
 							var superTypePath = typeToTypePath(t);
 							var typeDef:TypeDefinition = {
 								pack: localModule,
