@@ -1,6 +1,7 @@
 import haxe.unit.*;
 import hxAnonCls.AnonCls;
 import hxAnonCls.AnonCls.make in A;
+using StringTools;
 using Lambda;
 using Std;
 import haxe.Template;
@@ -145,6 +146,23 @@ class Test extends TestCase {
 
 	public function testUsing():Void {
 		var foobar = AnonCls.make((new IFoo():{
+			public function foo()
+				return [1, 2, 3]
+					.array()
+					.join(",");
+			function test():Void {
+				if (true) {
+					for (i in 0...10)
+					if (i < 5)
+					"abcde".startsWith("abc");
+				}
+			}
+		}));
+		assertEquals("1,2,3", foobar.foo());
+	}
+
+	public function testImport():Void {
+		var foobar = AnonCls.make((new IFoo():{
 			var v1:Template;
 			var v2 = new Template("");
 			var v3 = {
@@ -157,16 +175,6 @@ class Test extends TestCase {
 				var t = new Template("");
 				t;
 			}
-			public function foo()
-				return [1, 2, 3]
-					.array()
-					.join(",");
-		}));
-		assertEquals("1,2,3", foobar.foo());
-	}
-
-	public function testImport():Void {
-		var foobar = AnonCls.make((new IFoo():{
 			public function foo()
 				return stringify([1, 2, 3]);
 		}));
