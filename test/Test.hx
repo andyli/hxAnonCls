@@ -49,8 +49,10 @@ class Test extends TestCase {
 	public function testInterface():Void {
 		var foobar = AnonCls.make((new IFoo():{
 			public function foo() return "testInterface";
+			public function bar() return "bar";
 		}));
 		assertEquals("testInterface", foobar.foo());
+		assertEquals("bar", foobar.bar());
 	}
 
 	public function testInterfaceOverrideCtr():Void {

@@ -77,7 +77,13 @@ class AnonCls {
 															for (a in fun.args)
 															a.type
 														],
-														fun.ret != null ? fun.ret : Context.toComplexType(existingType.ret)
+														if (fun.ret != null)
+															fun.ret
+														else
+															if (existingType != null && existingType.ret != null)
+																Context.toComplexType(existingType.ret)
+															else
+																macro:Dynamic
 													);
 												// trace(fType);
 												var e = macro var $fName:$fType;
