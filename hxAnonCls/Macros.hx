@@ -42,7 +42,30 @@ class Macros {
 		return switch (e) {
 			case macro (new $t($a{args}):$extend)
 			if (extend.match(TAnonymous(_))):
+				args = args.map(mapCheckType);
+				var fields = switch (extend) {
+					case TAnonymous(fields): fields;
+					case _: throw extend;
+				}
+				for (field in fields)
+					field.kind = switch (field.kind) {
+						case FVar(t, e):
+							FVar(t, mapCheckType(e));
+						case FProp(get, set, t, e):
+							FProp(get, set, t, mapCheckType(e));
+						case FFun(fun):
+							FFun({
+								params: fun.params,
+								args: fun.args,
+								expr: mapCheckType(fun.expr),
+								ret: fun.ret,
+							});
+					}
+				extend = TAnonymous(fields);
+				e = macro (new $t($a{args}):$extend);
 				macro @:pos(e.pos) hxAnonCls.AnonCls.make($e);
+			case macro $b{exprs}:
+				macro @:pos(e.pos) hxAnonCls.AnonCls.make($b{exprs.map(mapCheckType)});
 			case null:
 				null;
 			case _:

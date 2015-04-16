@@ -53,6 +53,11 @@ class Test extends TestCase {
 		}));
 		assertEquals("testInterface", foobar.foo());
 		assertEquals("bar", foobar.bar());
+
+		var foobar:IFoo = AnonCls.make({
+			function foo() return "testInterface";
+		});
+		assertEquals("testInterface", foobar.foo());
 	}
 
 	public function testInterfaceOverrideCtr():Void {
@@ -235,6 +240,17 @@ class Test extends TestCase {
 		}));
 		assertEquals("local var", foobar.foo());
 		foobar.set();
+		assertEquals("changed", local);
+
+		var local = "local var";
+		var foobar:IFoo = AnonCls.make({
+			function foo() {
+				var old = local;
+				local = "changed";
+				return old;
+			}
+		});
+		assertEquals("local var", foobar.foo());
 		assertEquals("changed", local);
 	}
 

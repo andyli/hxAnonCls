@@ -22,6 +22,49 @@ class AnonCls {
 		} = switch (expr) {
 			case macro hxAnonCls.AnonCls.make($_): //in case the expr is wrapped by build macros
 				return expr;
+			case macro $b{exprs}:
+				var type = Context.getExpectedType();
+				if (type == null) return expr;
+				try switch (Context.follow(type)) {
+					case type = TInst(t, params):
+						var existingFields = switch (Types.getFields(type)) {
+							case Failure(err): Context.error(err.message, err.pos);
+							case Success(fs): fs;
+						}
+
+						{
+							type: type,
+							args: [],
+							fields: [
+								for (expr in exprs)
+								switch (expr.expr) {
+									case EVars([v]):
+										var clsField = existingFields.find(function(f) return f.name == v.name);
+										var access = [];
+										if (clsField.isPublic) access.push(APublic);
+										{
+											name: v.name,
+											access: access,
+											kind: FVar(v.type, v.expr),
+											pos: expr.pos
+										}
+									case EFunction(name, fun):
+										var clsField = existingFields.find(function(f) return f.name == name);
+										var access = [];
+										if (clsField.isPublic) access.push(APublic);
+										{
+											name: name,
+											access: access,
+											kind: FFun(fun),
+											pos: expr.pos
+										}
+									case _:
+										Context.error("Cannot convert expression to field.", expr.pos);
+								}
+							]
+						}
+					case _: throw "invalid";
+				} catch(e:Dynamic) return expr;
 			case macro (new $typePath($a{args}):$extend):
 				var complexType = TPath(typePath);
 				var t = Context.follow(Context.typeof(macro (null:$complexType)));

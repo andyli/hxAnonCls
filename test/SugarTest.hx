@@ -8,6 +8,11 @@ class SugarTest extends TestCase {
 			public function foo() return "testInterface";
 		});
 		assertEquals("testInterface", foobar.foo());
+
+		var foobar:IFoo = {
+			function foo() return "testInterface";
+		};
+		assertEquals("testInterface", foobar.foo());
 	}
 
 	public function testNormalCheckType():Void {
