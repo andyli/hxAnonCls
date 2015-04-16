@@ -59,7 +59,7 @@ class AnonCls {
 											pos: expr.pos
 										}
 									case _:
-										Context.error("Cannot convert expression to field.", expr.pos);
+										throw "invalid";//Context.error("Cannot convert expression to field.", expr.pos);
 								}
 							]
 						}
