@@ -11,6 +11,9 @@ using Lambda;
 
 class AnonCls {
 	macro static public function make(expr:Expr):Expr {
+		function badSyntax():Dynamic {
+			return Context.error("It should be used in the form of `(new Type():{ public function method() { } })`", expr.pos);
+		}
 		switch (expr) {
 			case macro hxAnonCls.AnonCls.make($_): //in case the expr is wrapped by build macros
 				return expr;
@@ -38,7 +41,7 @@ class AnonCls {
 						} catch(err:Dynamic) {
 							var fields = switch (extend) {
 								case TAnonymous(fields): fields;
-								case _: Context.error("It should be used in the form of `AnonCls.make((new MyClass():{ override public function xxx() return 'something'; }))`", expr.pos);
+								case _: badSyntax();
 							};
 							// trace(fields);
 
@@ -444,7 +447,7 @@ class AnonCls {
 						Context.error("Only able to create anonymous class of class or interface.", expr.pos);
 				}
 			default:
-				Context.error("It should be used in the form of `AnonCls.make((new MyClass():{ override public function xxx() return 'something'; }))`", expr.pos);
+				badSyntax();
 		}
 		return macro {};
 	}
