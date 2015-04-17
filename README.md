@@ -4,79 +4,119 @@ Java style [Anonymous Classes](http://docs.oracle.com/javase/tutorial/java/javaO
 
 ## Motivation
 
-When using the Haxe Java target, it is common to use the Java API, which the event system makes use of listener classes extensively. For example this is how we create and attach a `KeyListener` using anonymous class in Java:
+When using the Haxe Java target, it is common to use the Java API. This is how we create a `java.lang.Thread` using anonymous class in Java:
 
 ```java
-typingArea = new JTextField(20);
-typingArea.addKeyListener(new KeyListener(){
-    public void keyTyped(KeyEvent e) {
-        //handle keyTyped
-    }
-
-    public void keyPressed(KeyEvent e) {
-        //handle keyPressed
-    }
-
-    public void keyReleased(KeyEvent e) {
-        //handle keyReleased
-    }
-});
+class JavaThreadExample {
+	public static void main(String[] args) {
+		final String msg = "running in a separated thread";
+		Thread thread = new Thread() {
+			public void run() {
+				System.out.println(msg);
+			}
+		};
+		thread.run();
+	}
+}
 ```
 
-In Haxe, usually we have to implement the `KeyListener` interface explicitly somewhere:
+It would be very verbose doing the same thing in Haxe:
 
 ```haxe
-import java.awt.event.*;
-class MyKeyListener implements KeyListener{
-    public function new():Void {}
-    
-    public function keyTyped(e:KeyEvent):Void {
-        //handle keyTyped
-    }
-
-    public function keyPressed(e:KeyEvent):Void {
-        //handle keyPressed
-    }
-
-    public function keyReleased(e:KeyEvent):Void {
-        //handle keyReleased
-    }
+class JavaThreadExample {
+	static function main():Void {
+		/*
+			If we need to use local variables, they have to
+			be passed as constructor arguments.
+		*/
+		var msg = "running in a separated thread";
+		var thread = new CustomThread(msg);
+		thread.start();
+	}
 }
 
-//later in some place
-typingArea = new JTextField(20);
-typingArea.addKeyListener(new MyKeyListener());
+/*
+	We have to subclass manually.
+	The class definition location is faraway from the usage.
+*/
+class CustomThread extends java.lang.Thread {
+	var msg:String;
+	public function new(msg:String):Void {
+		super();
+		this.msg = msg;
+	}
+	@:overload override function run():Void {
+		trace(msg);
+	}
+}
 ```
 
 As you can see, creating a class for one-time usage is troublesome. Also when reading the code, it requires us to scroll more frequently.
 
 ## hxAnonCls to the rescue
 
-With **hxAnonCls**, we can now create anonymous class in Haxe similar to Java:
+With *hxAnonCls*, we can now create anonymous class in Haxe similar to Java.
+It supports two types of syntax, namely *block syntax* and *type-check syntax*, illustrated as follows.
 
 ```haxe
-import hxAnonCls.AnonCls;
-import java.awt.event.*;
+/*
+	Use a build macro as follows (haxe 3.1.3+), or 
+	add `--macro "hxAnonCls.Macros.buildAll()"` to our hxml (haxe 3.2+).
+*/
+@:build(hxAnonCls.Macros.build())
+class JavaThreadExample {
+	static function main():Void {
+		/*
+			Block Syntax
 
-typingArea = new JTextField(20);
-typingArea.addKeyListener(AnonCls.make((new KeyListener():{
-    public function keyTyped(e:KeyEvent):Void {
-        //handle keyTyped
-    }
+			When using this syntax, we provide a code block that contains
+			variable or function declarations to somewhere an instance
+			of a class/interface is expected.
+			The block can be given to a `var` expression as follows,
+			or to a function call as an argument.
 
-    public function keyPressed(e:KeyEvent):Void {
-        //handle keyPressed
-    }
+			hxAnonCls automatically adds `@:overload`/`override`
+			when needed when using this syntax.
+		*/
+		var thread:java.lang.Thread = {
+			var msg = "running in a separated thread";
+			function run():Void {
+				trace(msg);
+			}
+		};
+		thread.start();
 
-    public function keyReleased(e:KeyEvent):Void {
-        //handle keyReleased
-    }
-})));
+		/*
+			Type-Check Syntax
+
+			The type-check expression is in the form of `(variable:Type)`.
+			The (extra) parentheses are required.
+
+			It allows higher customizability than block syntax.
+			It lets us declare things that are not allowed with
+			block syntax. For example, `public`, `inline`,
+			`static`, metadata, and constructor.
+
+			hxAnonCls doen't automatically adds `@:overload`/
+			`override` - we have to be explicit when using this
+			syntax.
+		*/
+		var thread = (new java.lang.Thread("my thread"):{
+			var name:String;
+			public function new(name:String):Void {
+				super();
+				this.name = name;
+			}
+			@:overload override function run():Void {
+				trace("running " + name);
+			}
+		});
+		thread.start();
+	}
+}
 ```
 
 Notice that:
- * The argument to `AnonCls.make` should be an `ECheckType` expression, which is in the form of `(variable:Type)`. The (extra) parentheses are required.
- * You may use `import hxAnonCls.AnonCls.make in A;`, such that you can create anonymous class with shorter syntax: `A((new Type():{/*... */}))`.
  * Similar to Java, hxAnonCls is able to create anonymous class for both class and interface. A default constructor is added implicitly if it is not provided.
  * Similar to Java, anonymous classes created by hxAnonCls can access the properties and methods of their enclosing classes, including those are private. Use `parent` to reference the enclosing instance. Use `parent.field` or simply `field` to reference the enclosing instance field.
  * Anonymous classes created by hxAnonCls can read/write local variables in the enclosing block, unlike Java, which only allows reading final variables.
