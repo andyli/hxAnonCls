@@ -18,6 +18,7 @@ class AnonCls {
 		function notTInstError():Dynamic {
 			return Context.error("Only able to create anonymous class of class or interface.", expr.pos);
 		}
+		var inputExpr = expr;
 		var isBuild = switch (expr) {
 			case macro @:hxAnonClsMacrosBuild $e:
 				expr = e;
@@ -25,6 +26,14 @@ class AnonCls {
 			case _:
 				false;
 		}
+		if (!isBuild) {
+			switch (expr) {
+				case macro hxAnonCls.AnonCls.make(@:hxAnonClsMacrosBuild $e):
+					expr = e;
+				case _: //pass
+			}
+		}
+		
 		var input:{
 			type:Type,
 			args:Array<Expr>,
@@ -40,11 +49,29 @@ class AnonCls {
 					else
 						Context.error("Cannot figure out expected type.", expr.pos);
 				}
-				try switch (Context.follow(type)) {
+				switch (Context.follow(type)) {
 					case type = TInst(t, params):
 						var existingFields = switch (Types.getFields(type)) {
 							case Failure(err): Context.error(err.message, err.pos);
 							case Success(fs): fs;
+						}
+
+						var clsType = t.get();
+						if (clsType.constructor != null) {
+							var ctr = clsType.constructor.get();
+							switch (ctr.type) {
+								case TFun([], _): //pass
+								case ctrType:
+									if (!ctr.meta.has(":overload")) {
+										if (isBuild)
+											return inputExpr;
+										else {
+											Context.error("Constructor requires input argument(s). Use type-check expression syntax instead.", expr.pos);
+										}
+									} else {
+										// trace(ctr.meta.get());
+									}
+							}
 						}
 
 						{
@@ -56,9 +83,19 @@ class AnonCls {
 									case EVars([v]):
 										var clsField = existingFields.find(function(f) return f.name == v.name);
 										var access = [];
-										if (clsField.isPublic) access.push(APublic);
+										var meta = [];
+										if (clsField != null) {
+											if (clsField.meta.has(":overload"))
+												meta.push({
+													name: ":overload",
+													params: [],
+													pos: Context.currentPos()
+												});
+										}
+
 										{
 											name: v.name,
+											meta: meta,
 											access: access,
 											kind: FVar(v.type, v.expr),
 											pos: expr.pos
@@ -66,16 +103,30 @@ class AnonCls {
 									case EFunction(name, fun):
 										var clsField = existingFields.find(function(f) return f.name == name);
 										var access = [];
-										if (clsField.isPublic) access.push(APublic);
+										var meta = [];
+										if (clsField != null) {
+											if (!clsType.isInterface)
+												access.push(AOverride);
+											if (clsField.isPublic)
+												access.push(APublic);
+											if (clsField.meta.has(":overload"))
+												meta.push({
+													name: ":overload",
+													params: [],
+													pos: Context.currentPos()
+												});
+										}
+										
 										{
 											name: name,
+											meta: meta,
 											access: access,
 											kind: FFun(fun),
 											pos: expr.pos
 										}
 									case _:
 										if (isBuild)
-											throw "invalid";
+											return inputExpr;
 										else
 											Context.error("Cannot convert expression to class field.", expr.pos);
 								}
@@ -83,10 +134,10 @@ class AnonCls {
 						}
 					case _:
 						if (isBuild)
-							throw "invalid";
+							return inputExpr;
 						else
 							notTInstError();
-				} catch(e:Dynamic) return expr;
+				}
 			case macro (new $typePath($a{args}):$extend):
 				var complexType = TPath(typePath);
 				var t = Context.follow(Context.typeof(macro (null:$complexType)));
@@ -274,7 +325,8 @@ class AnonCls {
 					var ctor = getCtor(clsType);
 					if (ctor != null) {
 						//super()
-						var fType = Context.toComplexType(ctor.type);
+						// var fType = Context.toComplexType(ctor.type);
+						var fType = macro:Dynamic;
 						typeHints.push(macro var $superCtorName:$fType);
 					}
 

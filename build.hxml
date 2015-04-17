@@ -1,5 +1,5 @@
--main Test
--cp test
--lib tink_macro
--debug
---interp
+-java bin
+-main JavaThreadExample
+-cp example
+-lib hxAnonCls
+-cmd java -jar bin/JavaThreadExample.jar

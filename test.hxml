@@ -1,0 +1,6 @@
+-main Test
+-cp test
+-lib tink_macro
+-debug
+--macro hxAnonCls.Macros.buildAll()
+--interp

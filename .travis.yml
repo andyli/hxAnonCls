@@ -36,7 +36,9 @@ matrix:
     - haxe: development
 
 script:
-  - haxe -main Test -cp test -lib tink_macro -debug --interp
+  - haxelib dev hxAnonCls $TRAVIS_BUILD_DIR
+  - haxe build.hxml
+  - haxe test.hxml # --interp
   - haxe -main Test -cp test -lib tink_macro -debug -cpp bin/cpp && ./bin/cpp/Test-debug
   - haxe -main Test -cp test -lib tink_macro -debug -php bin/php && php bin/php/index.php
   - haxe -main Test -cp test -lib tink_macro -debug -neko bin/Test.n && neko bin/Test.n
