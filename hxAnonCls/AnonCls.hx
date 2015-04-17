@@ -436,27 +436,6 @@ class AnonCls {
 						TAnonymous(fields);
 					};
 
-					var contextArg = {name:contextObjName, type:contextCt};
-
-					if (needContext){
-						var fields = [];
-						if (hasParentAcc) {
-							fields.push({field: parentObjName, expr: macro this});
-						}
-						for (vname in localNames.keys()) {
-							fields.push({field: getterName(vname), expr: macro function() return $i{vname}});
-							fields.push({field: setterName(vname), expr: macro function($setterArgName) return $i{vname} = $i{setterArgName}});
-						}
-						args.push({expr: EObjectDecl(fields), pos: Context.currentPos()});
-
-						clsFields.push({
-							access: [APrivate],
-							name: contextArg.name,
-							kind: FProp("default", "null", contextArg.type, null),
-							pos: Context.currentPos()
-						});
-					}
-
 					// clsFields.unshift({
 					// 	access: [APrivate],
 					// 	name: "__impl__",
@@ -490,24 +469,21 @@ class AnonCls {
 						(needContext || clsType.isInterface || getCtor(clsType) == null)
 					) {
 						var superCtor = getCtor(clsType);
-						var args = if (superCtor == null) [] else switch (superCtor.type) {
-							case TFun(args, _):
-								args;
-							case _:
-								[];
-						};
-						var callArgs = [for (a in args) {
-							var name = a.name;
-							macro $i{name};
+						var callArgs = [for (i in 0...args.length) {
+							var name = "arg" + i;
+							macro @:pos(args[i].pos) $i{name};
 						}];
 						clsFields.push(ctorField = {
 							access: [APublic],
 							name: "new",
 							kind: FFun({
-								args: [for (a in args) {
-									name: a.name,
-									type: Context.toComplexType(a.t),
-									opt: a.opt
+								args: [for (i in 0...args.length) {
+									var a = args[i];
+									{
+										name: "arg" + i,
+										type: Context.toComplexType(Context.typeof(a)),
+										opt: false
+									}
 								}],
 								ret: null,
 								expr: superCtor == null ? macro {} : macro { super($a{callArgs}); }
@@ -516,6 +492,7 @@ class AnonCls {
 						});
 					}
 					if (needContext) {
+						var contextArg = {name:contextObjName, type:contextCt};
 						ctorField.kind = switch (ctorField.kind) {
 							case FFun(fun):
 								FFun({
@@ -523,9 +500,15 @@ class AnonCls {
 									args: fun.args.concat([contextArg]),
 									expr: switch (getFirstExpr(fun.expr)) {
 										case macro super($a{callArgs}):
-											macro {
-												${fun.expr};
-												this.$contextObjName = $i{contextObjName};
+											var setContext = macro this.$contextObjName = $i{contextObjName};
+											switch (fun.expr) {
+												case macro $b{exprs}:
+													macro $b{exprs.concat([setContext])}
+												case _:
+													macro {
+														${fun.expr};
+														$setContext;
+													}
 											}
 										case _:
 											macro {
@@ -538,6 +521,23 @@ class AnonCls {
 							case _:
 								throw "constructor should be a function";
 						}
+
+						var fields = [];
+						if (hasParentAcc) {
+							fields.push({field: parentObjName, expr: macro this});
+						}
+						for (vname in localNames.keys()) {
+							fields.push({field: getterName(vname), expr: macro function() return $i{vname}});
+							fields.push({field: setterName(vname), expr: macro function($setterArgName) return $i{vname} = $i{setterArgName}});
+						}
+						args.push({expr: EObjectDecl(fields), pos: Context.currentPos()});
+
+						clsFields.push({
+							access: [APrivate],
+							name: contextArg.name,
+							kind: FProp("default", "null", contextArg.type, null),
+							pos: Context.currentPos()
+						});
 					}
 
 

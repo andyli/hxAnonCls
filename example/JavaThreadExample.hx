@@ -17,8 +17,8 @@ class JavaThreadExample {
 			hxAnonCls automatically adds `@:overload`/`override`
 			when needed when using this syntax.
 		*/
+		var msg = "running in a separated thread";
 		var thread:java.lang.Thread = {
-			var msg = "running in a separated thread";
 			function run():Void {
 				trace(msg);
 			}
@@ -40,6 +40,7 @@ class JavaThreadExample {
 			`override` - we have to be explicit when using this
 			syntax.
 		*/
+		var msg = "running";
 		var thread = (new java.lang.Thread("my thread"):{
 			var name:String;
 			public function new(name:String):Void {
@@ -47,7 +48,7 @@ class JavaThreadExample {
 				this.name = name;
 			}
 			@:overload override function run():Void {
-				trace("running " + name);
+				trace(name + ": " + msg);
 			}
 		});
 		thread.start();
