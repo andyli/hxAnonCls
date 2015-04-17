@@ -12,8 +12,18 @@ using Lambda;
 
 class AnonCls {
 	macro static public function make(expr:Expr):Expr {
-		function badSyntax():Dynamic {
+		function badSyntaxError():Dynamic {
 			return Context.error("It should be used in the form of `(new Type():{ public function method() { } })`", expr.pos);
+		}
+		function notTInstError():Dynamic {
+			return Context.error("Only able to create anonymous class of class or interface.", expr.pos);
+		}
+		var isBuild = switch (expr) {
+			case macro @:hxAnonClsMacrosBuild $e:
+				expr = e;
+				true;
+			case _:
+				false;
 		}
 		var input:{
 			type:Type,
@@ -24,7 +34,12 @@ class AnonCls {
 				return expr;
 			case macro $b{exprs}:
 				var type = Context.getExpectedType();
-				if (type == null) return expr;
+				if (type == null) {
+					if (isBuild)
+						return expr;
+					else
+						Context.error("Cannot figure out expected type.", expr.pos);
+				}
 				try switch (Context.follow(type)) {
 					case type = TInst(t, params):
 						var existingFields = switch (Types.getFields(type)) {
@@ -59,11 +74,18 @@ class AnonCls {
 											pos: expr.pos
 										}
 									case _:
-										throw "invalid";//Context.error("Cannot convert expression to field.", expr.pos);
+										if (isBuild)
+											throw "invalid";
+										else
+											Context.error("Cannot convert expression to class field.", expr.pos);
 								}
 							]
 						}
-					case _: throw "invalid";
+					case _:
+						if (isBuild)
+							throw "invalid";
+						else
+							notTInstError();
 				} catch(e:Dynamic) return expr;
 			case macro (new $typePath($a{args}):$extend):
 				var complexType = TPath(typePath);
@@ -75,14 +97,14 @@ class AnonCls {
 							args: args,
 							fields: switch (extend) {
 								case TAnonymous(fields): fields;
-								case _: badSyntax();
+								case _: badSyntaxError();
 							}
 						}
 					default:
-						Context.error("Only able to create anonymous class of class or interface.", expr.pos);
+						notTInstError();
 				}
 			default:
-				badSyntax();
+				badSyntaxError();
 		}
 		var type = input.type;
 		var typePath = typeToTypePath(type);

@@ -63,9 +63,9 @@ class Macros {
 					}
 				extend = TAnonymous(fields);
 				e = macro @:pos(e.pos) (new $t($a{args}):$extend);
-				macro @:pos(e.pos) hxAnonCls.AnonCls.make($e);
+				macro @:pos(e.pos) hxAnonCls.AnonCls.make(@:hxAnonClsMacrosBuild $e);
 			case macro $b{exprs}:
-				macro @:pos(e.pos) hxAnonCls.AnonCls.make($b{exprs.map(mapCheckType)});
+				macro @:pos(e.pos) hxAnonCls.AnonCls.make(@:hxAnonClsMacrosBuild $b{exprs.map(mapCheckType)});
 			case null:
 				null;
 			case _:
