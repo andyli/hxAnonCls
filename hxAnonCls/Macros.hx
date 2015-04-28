@@ -97,7 +97,8 @@ class Macros {
 					var hasParentAcc = false;
 					function mapParentAcc(e:Expr):Expr {
 						return switch (e) {
-							case {expr: EConst(CIdent("`")), pos: pos}:
+							case {expr: EConst(CIdent(name)), pos: pos}
+							if (name.startsWith("`")):
 								hasParentAcc = true;
 								// trace(e);
 								macro @:pos(pos) this.$contextObjName.$parentObjName;
