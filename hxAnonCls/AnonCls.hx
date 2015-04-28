@@ -11,6 +11,9 @@ using Lambda;
 #end
 
 class AnonCls {
+	#if macro
+	static var built = new Map<String, {args:Array<Expr>}>();
+	#end
 	macro static public function make(expr:Expr):Expr {
 		function badSyntaxError():Dynamic {
 			return Context.error("It should be used in the form of `(new Type():{ public function method() { } })`", expr.pos);
@@ -177,9 +180,11 @@ class AnonCls {
 				var localPack = localModule.copy();
 				var localModuleName = localPack.pop();
 				var clsName = localModuleName + "_" + clsType.name + "_" + posInfo.min;
-				try {
-					var type = Context.getType(localModule.join(".") + "." + clsName);
-				} catch(err:Dynamic) {
+				var clsFullName = localModule.join(".") + "." + clsName;
+				if (built.exists(clsFullName)) {
+					var builtData = built[clsFullName];
+					args = builtData.args;
+				} else {
 					var existingFields = switch (Types.getFields(type)) {
 						case Failure(err): Context.error(err.message, err.pos);
 						case Success(fs): fs;
@@ -554,9 +559,13 @@ class AnonCls {
 					}
 
 					Context.defineType(typeDef);
+					built[clsFullName] = {
+						args: args
+					}
 
-					// var printer = new haxe.macro.Printer();
+					var printer = new haxe.macro.Printer();
 					// var str = printer.printTypeDefinition(typeDef);
+					// sys.FileSystem.createDirectory("dump");
 					// sys.io.File.saveContent("dump/" + typeDef.pack.join(".") + "." + typeDef.name + ".hx", str);
 
 					// Context.defineModule(
