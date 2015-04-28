@@ -1,12 +1,18 @@
 language: haxe
 
+sudo: false
+addons:
+  apt:
+    packages:
+      - python3
+      - php5-cli
+      - mono-devel
+      - mono-mcs
+
 matrix:
   include:
     - haxe: "3.1.3"
       install:
-        - sudo apt-get install php5 -qq
-        - sudo apt-get install mono-devel mono-mcs -qq
-        - sudo apt-get install python3 -qq
         - yes | haxelib install hxcpp
         - yes | haxelib install hxjava
         - yes | haxelib install hxcs
@@ -16,10 +22,6 @@ matrix:
 
     - haxe: development
       install:
-        - sudo apt-get install php5 -qq
-        - sudo apt-get install mono-devel mono-mcs -qq
-        - sudo apt-get install python3 -qq
-
         # install and rebuild hxcpp
         - haxelib git hxcpp https://github.com/HaxeFoundation/hxcpp.git
         - cd $(haxelib path hxcpp | head -1)tools/hxcpp && haxe compile.hxml
