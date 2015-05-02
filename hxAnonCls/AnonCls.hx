@@ -545,9 +545,12 @@ class AnonCls {
 						});
 					}
 
-
 					var typeDef:TypeDefinition = {
 						pack: localModule,
+						meta: if (clsType.meta.has(":javaNative"))
+							[{name: ":nativeGen", pos: Context.currentPos()}]
+						else
+							[],
 						kind: if (clsType.isInterface) {
 							TDClass(null, [typePath], false);
 						} else {
