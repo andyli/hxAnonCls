@@ -31,8 +31,10 @@ class Macros {
 						expr: mapCheckType(f.expr),
 						ret: f.ret
 					});
-				case _: //TODO
-					f.kind;
+				case FProp(get, set, t, e):
+					FProp(get, set, t, mapCheckType(e));
+				case FVar(t, e):
+					FVar(t, mapCheckType(e));
 			}
 		}
 		return fields;
