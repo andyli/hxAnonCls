@@ -11,6 +11,15 @@ addons:
 
 matrix:
   include:
+    - haxe: "3.2.0"
+      install:
+        - yes | haxelib install hxcpp
+        - yes | haxelib install hxjava
+        - yes | haxelib install hxcs
+        - yes | haxelib install nodejs
+        - yes | haxelib install tink_macro
+        - haxelib list
+
     - haxe: "3.1.3"
       install:
         - yes | haxelib install hxcpp
