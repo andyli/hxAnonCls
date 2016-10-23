@@ -60,8 +60,8 @@ It supports two types of syntax, namely *block syntax* and *type-check syntax*, 
 
 ```haxe
 /*
-	Use a build macro as follows (haxe 3.1.3+), or 
-	add `--macro "hxAnonCls.Macros.buildAll()"` to our hxml (haxe 3.2+).
+	Use a build macro as follows, or 
+	add `--macro "hxAnonCls.Macros.buildAll()"` to our hxml.
 */
 @:build(hxAnonCls.Macros.build())
 class JavaThreadExample {
@@ -124,7 +124,7 @@ Notice that:
 
 ## Dependancies
 
- * Haxe 3.1.3+
+ * Haxe 3.2.1+
  * tink_macro 0.5.0+ 
 
 # Like hxAnonCls?
