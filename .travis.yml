@@ -11,7 +11,7 @@ addons:
 
 matrix:
   include:
-    - haxe: "3.2.0"
+    - haxe: "3.2.1"
       install:
         - yes | haxelib install hxcpp
         - yes | haxelib install hxjava
@@ -36,12 +36,11 @@ matrix:
         - cd $(haxelib path hxcpp | head -1)tools/hxcpp && haxe compile.hxml
         - cd $(haxelib path hxcpp | head -1)project && neko build.n linux-m64
         - cd $TRAVIS_BUILD_DIR
-
+        # install various haxelibs
         - haxelib git hxjava https://github.com/HaxeFoundation/hxjava.git
         - haxelib git hxcs https://github.com/HaxeFoundation/hxcs.git
         - yes | haxelib install nodejs
         - yes | haxelib install tink_macro
-
         - haxelib list
   allow_failures:
     - haxe: development
@@ -59,6 +58,6 @@ script:
   - haxe -main Test -cp test -lib tink_macro -debug -swf bin/Test.swf
   - haxe -main Test -cp test -lib tink_macro -debug -as3 bin/as3
   - if [ "${TRAVIS_HAXE_VERSION}" = "development" ]; then
-    haxe -main Test -cp test -lib tink_macro -debug -python bin/Test.py && python3 bin/Test.py;
-    haxe -main Test -cp test -lib tink_macro -debug --interp --macro "hxAnonCls.Macros.buildAll()";
+      haxe -main Test -cp test -lib tink_macro -debug -python bin/Test.py && python3 bin/Test.py;
+      haxe -main Test -cp test -lib tink_macro -debug --interp --macro "hxAnonCls.Macros.buildAll()";
     fi
