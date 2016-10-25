@@ -20,6 +20,15 @@ matrix:
         - yes | haxelib install tink_macro
         - haxelib list
 
+    - haxe: "3.3.0-rc.1"
+      install:
+        - yes | haxelib install hxcpp
+        - yes | haxelib install hxjava
+        - yes | haxelib install hxcs
+        - yes | haxelib install nodejs
+        - yes | haxelib install tink_macro
+        - haxelib list
+
     - haxe: development
       install:
         # install and rebuild hxcpp
