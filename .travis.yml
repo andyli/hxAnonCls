@@ -1,6 +1,7 @@
 language: haxe
 
 sudo: false
+dist: trusty
 addons:
   apt:
     packages:
@@ -20,7 +21,7 @@ matrix:
         - yes | haxelib install tink_macro
         - haxelib list
 
-    - haxe: "3.3.0-rc.1"
+    - haxe: "3.4.0"
       install:
         - yes | haxelib install hxcpp
         - yes | haxelib install hxjava
@@ -57,7 +58,7 @@ script:
   - haxe -main Test -cp test -lib tink_macro -debug -cs bin/cs && mono bin/cs/bin/Test-Debug.exe
   - haxe -main Test -cp test -lib tink_macro -debug -swf bin/Test.swf
   - haxe -main Test -cp test -lib tink_macro -debug -as3 bin/as3
-  - if [ "${TRAVIS_HAXE_VERSION}" = "development" ]; then
+  - if [ "${TRAVIS_HAXE_VERSION}" != "3.2.1" ]; then
       haxe -main Test -cp test -lib tink_macro -debug -python bin/Test.py && python3 bin/Test.py;
       haxe -main Test -cp test -lib tink_macro -debug --interp --macro "hxAnonCls.Macros.buildAll()";
     fi
