@@ -330,7 +330,11 @@ class Macros {
 					} else {
 						v.name;
 					}
+					#if (haxe_ver > 3.2)
+					if (v.meta.get().exists(function(m) return m.name == ":unbound"))
+					#else
 					if ((untyped v.meta:Metadata).exists(function(m) return m.name == ":unbound"))
+					#end
 						macro @:pos(te.pos) untyped $i{vName};
 					else
 						macro @:pos(te.pos) $i{vName};

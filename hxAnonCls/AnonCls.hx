@@ -546,7 +546,7 @@ class AnonCls {
 					}
 
 					var typeDef:TypeDefinition = {
-						pack: localModule,
+						pack: [],
 						meta: if (clsType.meta.has(":javaNative"))
 							[{name: ":nativeGen", pos: Context.currentPos()}]
 						else
@@ -588,7 +588,7 @@ class AnonCls {
 					// );
 				}
 
-				var tPath = { pack:[], name:localModuleName, sub:clsName };
+				var tPath = { pack:[], name:clsName };
 				return macro new $tPath($a{args});
 			case _: throw type;
 		}
