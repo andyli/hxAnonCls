@@ -330,7 +330,7 @@ class Macros {
 					} else {
 						v.name;
 					}
-					#if (haxe_ver > 3.2)
+					#if (haxe_ver >= 3.4)
 					if (v.meta.get().exists(function(m) return m.name == ":unbound"))
 					#else
 					if ((untyped v.meta:Metadata).exists(function(m) return m.name == ":unbound"))
