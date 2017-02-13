@@ -127,6 +127,3 @@ Notice that:
  * Haxe 3.2.1+
  * tink_macro 0.5.0+ 
 
-# Like hxAnonCls?
-
-Support me to maintain it -> http://www.patreon.com/andyli
