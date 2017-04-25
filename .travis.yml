@@ -21,7 +21,7 @@ matrix:
         - yes | haxelib install tink_macro
         - haxelib list
 
-    - haxe: "3.4.0"
+    - haxe: "3.4.2"
       install:
         - yes | haxelib install hxcpp
         - yes | haxelib install hxjava
